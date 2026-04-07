@@ -14,7 +14,6 @@ Depends:
 Additional_repositories:
     https://mc-stan.org/r-packages/
 Imports: 
-    cmdstanr,
     ggplot2,
     instantiate,
     stringr
