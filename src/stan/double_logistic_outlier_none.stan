@@ -42,6 +42,8 @@ data {
   int<lower=0, upper=1> shock_diff_mode;
   
   real<lower=0> outlier_threshold;
+  real<lower=0> epsilon_sigma_prior_mu;
+  real<lower=0> epsilon_sigma_prior_sd;
   
   int<lower=1> D;
   
@@ -159,7 +161,7 @@ model {
     to_vector(final_transition[1]) ~ normal(1.15 / 10, 0.5);
   }
   
-  epsilon_sigma ~ std_normal();
+  epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
   
   if (outlier_threshold < 1000) {
     diff[indices_below_threshold] ~ normal(

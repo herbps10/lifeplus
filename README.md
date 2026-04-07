@@ -16,4 +16,4 @@ pak::pak("herbps10/lifeplus")
 ```
 
 ## Getting started
-For an introduction to fitting models with `lifeplus`, see the [Getting started vignette](https://herbsusmann.com/lifeplus/getting_started.html).
+For an introduction to `lifeplus`, see the [Modeling life expectancy with lifeplus](https://herbsusmann.com/lifeplus/getting_started.html) vignette.

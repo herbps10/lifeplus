@@ -33,10 +33,9 @@ data {
   int num_knots;
   vector[num_knots] knots;
   int spline_degree;
-  matrix[num_knots + spline_degree - 1, num_grid] B;
+  matrix[num_basis, num_grid] B;
 }
 transformed data {
-  int num_basis = num_knots + spline_degree - 1;
   vector[2 * spline_degree + num_knots] ext_knots;
 
   ext_knots[1:spline_degree] = rep_vector(knots[1], spline_degree);
@@ -47,8 +46,6 @@ transformed data {
   real P_tilde2 = 110;
 }
 parameters {
-  // Spline coefficients
-  //matrix<lower=0>[C, num_basis] alpha; 
 }
 transformed parameters {
   for(c in 1:C) {
@@ -96,8 +93,10 @@ generated quantities {
 
   if(hierarchical == 1) {
     row_vector[num_basis] mu_alpha_pred = to_row_vector(mu_alpha[1]);
-    if(alpha_constrain == 1) {
-      mu_alpha_pred = inv_logit(mu_alpha_pred) * (alpha_upper - alpha_lower) + alpha_lower;
+    for(i in 1:num_basis) {
+      if(alpha_constrain[i] == 1) {
+        mu_alpha_pred[i] = inv_logit(mu_alpha_pred[i]) * (alpha_upper[i] - alpha_lower[i]) + alpha_lower[i];
+      }
     }
     for(i in 1:num_grid) {
       transition_function_pred_mean[i] = rate_spline(grid[i] / 110, 0, 1, mu_alpha_pred, ext_knots, num_basis, spline_degree);

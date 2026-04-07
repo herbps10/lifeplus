@@ -1,8 +1,8 @@
 ---
-title: "Getting started with lifeplus"
+title: "Modeling life expectancy with lifeplus"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting started with lifeplus}
+  %\VignetteIndexEntry{Modeling life expectancy with lifeplus}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -32,8 +32,8 @@ $$
 
 where
 
-- $g$ is the _transition model_ with area-specific parameters $\beta_c$.
-- $\delta_{c,t}$ is the _shock model_.
+- $g$ is a _transition model_ with area-specific parameters $\beta_c$.
+- $\delta_{c,t}$ is a shock term, to which a _shock model_ is applied.
 - $\epsilon_{c,t}$ is a residual modeled by a _data model_.
 
 Multiple options are available for each of these models. Each model may have additional configuration options; to learn about the options that are available, you can check the documentation of each function (e.g, `?transition_model_double_logistic`). 
@@ -41,6 +41,8 @@ Multiple options are available for each of these models. Each model may have add
 ### Transition models
 
 - **Double logistic**: `transition_model_double_logistic`. The transition is modeled by a parametric double logistic function (Raftery et al. 2013). 
+- **Spline**: `transition_model_spline`. The transition is modeled by a B-spline function.
+- **Gaussian Process**: `transition_model_gaussian_process`. The transition function is assigned a Gaussian Process prior, approximated using a basis function expansion method.
 
 ### Shock models
 
@@ -49,7 +51,7 @@ Multiple options are available for each of these models. Each model may have add
 
 ### Data models
 - **Normal**: `data_model_normal`. The residuals are modeled as $\epsilon_{c,t} \sim N\left(0, \sigma^2\right)$.
-- **Outlier**:  `data_model_outlier` . Any absolute life expectancy differences larger than a user-specified threshold are ignored. The remaining observations are modeled as $\epsilon_{c,t} \sim N(\left(0, \sigma^2\right)$. 
+- **Outlier**:  `data_model_outlier` . Any absolute life expectancy differences larger than a user-specified threshold are ignored. The remaining observations are modeled as $\epsilon_{c,t} \sim N\left(0, \sigma^2\right)$. 
 
 ## Fitting World Population Prospect Data
 
@@ -144,11 +146,11 @@ We can also plot the estimated shock terms from this model:
 plot_shocks(fit_shocks)
 ```
 
-
-
 ## References
-
-- Raftery, A.E., Chunn, J.L., Gerland, P. et al. [Bayesian probabilistic projections of life expectancy for all countries](https://doi.org/10.1007/s13524-012-0193-x). 
-  Demography 50, 777–801 (2013).
-- Juho Piironen, Aki Vehtari. [Sparsity information and regularization in the horseshoe and other shrinkage priors](https://doi.org/10.1214/17-EJS1337SI).
-  Electronic Journal of Statistics, 11(2), 5018-5051, (2017)  
+- Riutort-Mayol, G., Bürkner, PC., Andersen, M.R. et al. (2020) [Practical Hilbert space approximate Bayesian Gaussian processes for probabilistic programming](https://link.springer.com/article/10.1007/s11222-022-10167-2). Statistics and Computing 33, 17.
+- Juho Piironen, Aki Vehtari. (2017) [Sparsity information and regularization in the horseshoe and other shrinkage priors](https://doi.org/10.1214/17-EJS1337SI).
+  Electronic Journal of Statistics, 11(2), 5018-5051.   
+- Raftery, A.E., Chunn, J.L., Gerland, P. et al. (2013) [Bayesian probabilistic projections of life expectancy for all countries](https://doi.org/10.1007/s13524-012-0193-x). 
+  Demography 50, 777–801.
+- Susmann, H., Alexander, M., and Alkema, L. (2022) [Temporal Models for Demographic and Global Health Outcomes in Multiple Populations: Introducing a New Framework to Review and Standardise Documentation of Model Assumptions and Facilitate Model Comparison](https://doi.org/10.1111/insr.12491).
+  International Statistical Review, 90: 437–467. 

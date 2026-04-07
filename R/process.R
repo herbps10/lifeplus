@@ -60,7 +60,7 @@ process_transition_function_mean <- function(fit, parallel_chains, probs) {
   }
 
   post <- fit$samples$summary(
-    "transition_function_mean",
+    "transition_function_pred_mean",
     ~ stats::quantile(.x, probs = probs),
     posterior::default_convergence_measures(),
     .cores = parallel_chains

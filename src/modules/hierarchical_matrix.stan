@@ -18,7 +18,7 @@ transformed parameters {
       var[, n] = mu_var[1][n] + sigma_var[1][n] * raw_var[, n];
     }
     else {
-      var[, n] = raw_var;
+      var[, n] = raw_var[, n];
     }
 
     if(var_constrain[n] == 1) {
@@ -33,6 +33,8 @@ model {
     sigma_var[1] ~ std_normal();
   }
   else {
-    to_vector(raw_var) ~ normal(var_prior_mean, var_prior_sd);
+    for(i in 1:num) {
+      raw_var[, i] ~ normal(var_prior_mean[i], var_prior_sd[i]);
+    }
   }
 }

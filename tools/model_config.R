@@ -1,6 +1,10 @@
 generate_config <- function(transition_model, data_model, shocks) {
-  if (!(transition_model %in% c("double_logistic", "spline", "gp"))) {
-    stop("transition_model must be one of: double_logistic, spline, gp")
+  if (
+    !(transition_model %in% c("double_logistic", "spline", "gaussian_process"))
+  ) {
+    stop(
+      "transition_model must be one of: double_logistic, spline, gaussian_process"
+    )
   }
   if (!(data_model %in% c("normal", "outlier", "mixture"))) {
     stop("data_model must be one of: normal, outlier, mixture")
@@ -20,7 +24,9 @@ generate_config <- function(transition_model, data_model, shocks) {
   )
   deps[[inc("base.stan")]] <- "empty"
 
-  if (transition_model == "gp" || data_model == "heteroskedastic") {
+  if (
+    transition_model == "gaussian_process" || data_model == "heteroskedastic"
+  ) {
     deps[[inc("approximate_gp.stan")]] <- "empty"
   }
 
@@ -46,13 +52,14 @@ generate_config <- function(transition_model, data_model, shocks) {
       num = "D"
     )
     deps[[inc("transition_double_logistic.stan")]] <- "empty"
-  } else if (transition_model == "gp") {
+  } else if (transition_model == "gaussian_process") {
     deps[[inc("hierarchical_matrix.stan")]] <- list(
       "var" = "beta",
       "num" = "M"
     )
-    deps[[inc("transition_gp.stan")]] <- c()
+    deps[[inc("transition_gaussian_process.stan")]] <- "empty"
   } else if (transition_model == "spline") {
+    deps[[inc("transition_spline_data.stan")]] <- "empty"
     deps[[inc("hierarchical_matrix.stan")]] <- list(
       "var" = "alpha",
       "num" = "num_basis"
@@ -64,10 +71,11 @@ generate_config <- function(transition_model, data_model, shocks) {
 }
 
 configs <- tidyr::expand_grid(
-  transition_model = "double_logistic",
+  transition_model = c("double_logistic", "spline", "gaussian_process"),
   data_model = c("normal", "outlier"),
   shock = c(FALSE, TRUE)
 ) |>
+  dplyr::filter(!(shock == TRUE & data_model == "outlier")) |>
   dplyr::mutate(
     config = purrr::pmap(
       list(transition_model, data_model, shock),

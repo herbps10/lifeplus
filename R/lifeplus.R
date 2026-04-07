@@ -57,6 +57,8 @@ lifeplus <- function(
   # Make sure the observed data are within the estimation period
   checkmate::check_integer(data[[time]], lower = start_time, upper = end_time)
 
+  check_model_compatibility(transition_model, data_model, shock_model)
+
   # Load model
   stan_model <- load_model(transition_model, data_model, shock_model)
   # Setup data for Stan
