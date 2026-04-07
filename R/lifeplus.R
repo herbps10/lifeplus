@@ -14,6 +14,7 @@ library(splines)
 #' @param held_out binary vector indicating which observations are held out. Set to FALSE to hold out no observations.
 #' @param ... additional arguments passed to CmdStanModel::sample.
 #'
+#'
 #' @export
 lifeplus <- function(
   data,
@@ -22,7 +23,7 @@ lifeplus <- function(
   area,
   start_time = NULL,
   end_time = NULL,
-  transition_model = transition_model_logistic(),
+  transition_model = transition_model_double_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
   held_out = FALSE,

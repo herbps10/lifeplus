@@ -19,9 +19,12 @@ plot_projections(
 
 \item{start_time}{first time point to plot (defaults to first data point)}
 
-\item{data}{logical indicating whether to plot raw data (default: TRUE)}
+\item{end_time}{final time point to plot (defaults to final projection time point)}
 
-\item{endart_time}{final time point to plot (defaults to final projection time point)}
+\item{data}{logical indicating whether to plot raw data (default: TRUE)}
+}
+\value{
+ggplot2 plot
 }
 \description{
 Plot posterior projections

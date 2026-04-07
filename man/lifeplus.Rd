@@ -11,7 +11,7 @@ lifeplus(
   area,
   start_time = NULL,
   end_time = NULL,
-  transition_model = transition_model_logistic(),
+  transition_model = transition_model_double_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
   held_out = FALSE,

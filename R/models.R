@@ -44,11 +44,11 @@ transition_model_double_logistic <- function(hierarchical = TRUE) {
 #' @export
 transition_model_spline <- function(degree = 2, num_knots = 7) {
   checkmate::check_integer(degree, lower = 1)
-  checkmate::check_integer(knots, lower = 1)
+  checkmate::check_integer(num_knots, lower = 1)
 
   f <- function(y, grid) {
-    knots <- sort(c(seq(0, max(data[[y]]) / 110, length.out = num_knots), 1, 2))
-    B <- t(bs(grid, knots = knots, degree = degree, intercept = FALSE))
+    knots <- sort(c(seq(0, max(y) / 110, length.out = num_knots), 1, 2))
+    B <- t(splines::bs(grid, knots = knots, degree = degree, intercept = FALSE))
     B <- B[1:(nrow(B) - 1), ]
     num_grid <- length(grid)
     num_basis <- nrow(B)
@@ -80,6 +80,10 @@ transition_model_spline <- function(degree = 2, num_knots = 7) {
 #'
 #' @param prior_mean Prior mean for white noise standard deviation
 #' @param prior_sd Prior standard deviation for white noise standard deviation
+#' @details
+#' The residuals are modeled as $\epsilon_{c,t} \sim N(0, \sigma^2)$.
+#' The prior for the residual scale parameter is $\sigma \sim N(m, s^2)$,
+#' where $m$ and $s$ are user-specified via the `prior_mean` and `prior_sd` arguments, respectively.
 #'
 #' @return lifeplus_data_model
 #' @export
@@ -95,11 +99,49 @@ data_model_normal <- function(prior_mean = 0, prior_sd = 1) {
   x
 }
 
+
+#' Outlier data model
+#'
+#' @param outlier_threshold threshold for ignoring observed life expectancy differences.
+#' @param prior_mean Prior mean for white noise standard deviation
+#' @param prior_sd Prior standard deviation for white noise standard deviation
+#' @details
+#' Any observed absolute differences in life expectancy greater than the user-specified outlier threshold (`outlier_threshold`) are ignored.
+#' The remaining residuals are modeled as in the normal data model:  $\epsilon_{c,t} \sim N(0, \sigma^2)$.
+#' The prior for the residual scale parameter is $\sigma \sim N(m, s^2)$,
+#' where $m$ and $s$ are user-specified via the `prior_mean` and `prior_sd` arguments, respectively.
+#'
+#' @return lifeplus_data_model
+#' @export
+data_model_outlier <- function(
+  outlier_threshold = 5,
+  prior_mean = 0,
+  prior_sd = 1
+) {
+  x <- list(
+    name = "outlier",
+    stan_data = list(
+      outlier_threshold = outlier_threshold,
+      epsilon_sigma_prior_mu = prior_mean,
+      epsilon_sigma_prior_sd = prior_sd
+    )
+  )
+  class(x) <- "lifeplus_data_model"
+  x
+}
+
 #' Regularized horseshoe prior model for shocks
 #' @param scale_global Global scale parameter
 #' @param slab_scale Slab scale parameter
 #' @param slab_df Slab degrees of freedom parameter
 #' @param constrain_negative Whether to constrain shocks to be negative (default: FALSE)
+#' @details
+#' The regularized horseshoe prior aggressively shrinks the shock term to zero.
+#'
+#'
+#'
+#' Reference: Juho Piironen, Aki Vehtari "Sparsity information and regularization in the horseshoe and other shrinkage priors,"
+#' Electronic Journal of Statistics, Electron. J. Statist. 11(2), 5018-5051, (2017)
 #' @export
 shock_model_regularized_horseshoe <- function(
   scale_global = 0.1,
@@ -125,6 +167,9 @@ shock_model_regularized_horseshoe <- function(
   x
 }
 
+#' Fix all shock terms to zero.
+#'
+#' @export
 shock_model_none <- function() {
   x <- list(
     name = "none"

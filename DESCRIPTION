@@ -14,8 +14,11 @@ Depends:
 Additional_repositories:
     https://mc-stan.org/r-packages/
 Imports: 
+    checkmate,
     ggplot2,
     instantiate,
+    posterior,
+    splines,
     stringr
 Suggests: 
     knitr,

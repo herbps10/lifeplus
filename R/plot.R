@@ -1,10 +1,27 @@
+globalVariables(c(
+  "time",
+  "2.5%",
+  "10%",
+  "25%",
+  "50%",
+  "75%",
+  "90%",
+  "97.5%",
+  "x",
+  "y",
+  "px",
+  "py"
+))
+
 #' Plot posterior projections
 #'
 #' @param fit lifeplus fit object
 #' @param areas vector of areas to plot (default: all areas in fit)
 #' @param start_time first time point to plot (defaults to first data point)
-#' @param endart_time final time point to plot (defaults to final projection time point)
+#' @param end_time final time point to plot (defaults to final projection time point)
 #' @param data logical indicating whether to plot raw data (default: TRUE)
+#'
+#' @return ggplot2 plot
 #'
 #' @export
 plot_projections <- function(
@@ -54,7 +71,8 @@ plot_projections <- function(
     ) +
     ggplot2::geom_line() +
     ggplot2::scale_fill_brewer(direction = -1) +
-    ggplot2::facet_wrap(~area)
+    ggplot2::facet_wrap(~area) +
+    ggplot2::labs(x = fit$time, y = fit$y)
 
   if (data == TRUE) {
     point_data <- data.frame(
@@ -73,7 +91,9 @@ plot_projections <- function(
 #' @param fit lifeplus fit object
 #' @param areas vector of areas to plot (default: all areas in fit)
 #' @param start_time first time point to plot (defaults to first data point)
-#' @param endart_time final time point to plot (defaults to final projection time point)
+#' @param end_time final time point to plot (defaults to final projection time point)
+#'
+#' @return ggplot2 object
 #'
 #' @export
 plot_shocks <- function(
@@ -134,6 +154,8 @@ plot_shocks <- function(
 #' @param data logical indicating whether to plot raw data (default: TRUE)
 #'
 #' @return ggplot2 object
+#'
+#' @export
 plot_transitions <- function(fit, areas = fit$areas, data = TRUE) {
   checkmate::check_class(fit, "lifeplus")
   checkmate::check_subset(areas, fit$areas)

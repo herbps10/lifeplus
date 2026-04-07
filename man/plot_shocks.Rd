@@ -18,7 +18,10 @@ plot_shocks(
 
 \item{start_time}{first time point to plot (defaults to first data point)}
 
-\item{endart_time}{final time point to plot (defaults to final projection time point)}
+\item{end_time}{final time point to plot (defaults to final projection time point)}
+}
+\value{
+ggplot2 object
 }
 \description{
 Plot posterior shocks

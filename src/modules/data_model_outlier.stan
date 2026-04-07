@@ -5,6 +5,8 @@ functions {
 }
 data {
   real<lower=0> outlier_threshold;
+  real<lower=0> epsilon_sigma_prior_mu;
+  real<lower=0> epsilon_sigma_prior_sd;
 }
 transformed data {
   int n_below_threshold = 0;
@@ -27,7 +29,7 @@ parameters {
   real<lower=0> epsilon_sigma;
 }
 model {
-  epsilon_sigma ~ std_normal();
+  epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
 
   if(outlier_threshold < 1000) {
     diff[indices_below_threshold] ~ normal(to_vector(transition_function)[indices_below_threshold], epsilon_sigma);
