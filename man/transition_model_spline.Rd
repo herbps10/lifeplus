@@ -11,6 +11,9 @@ transition_model_spline(degree = 2, num_knots = 7)
 
 \item{num_knots}{Number of spline knots}
 }
+\value{
+lifeplus_transition_model
+}
 \description{
 Spline transition model
 }

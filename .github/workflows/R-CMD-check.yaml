@@ -4,12 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
-    brainches: [main]
+    branches: [main]
 
-name: R-CMD-check.yaml
+name: R-CMD-check
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }} 
+  cancel-in-progress: true
 
 permissions: read-all
 
@@ -64,6 +65,7 @@ jobs:
 
       - name: Install cmdstan
         run: |
+          install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
           cmdstanr::check_cmdstan_toolchain()
           if (!is.null(tryCatch(cmdstanr::cmdstan_path(), error = function(e) NULL))) {
             message("CmdStan already installed at: ", cmdstanr::cmdstan_path())

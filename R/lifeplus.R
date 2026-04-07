@@ -16,26 +16,19 @@ library(splines)
 #'
 #' @export
 lifeplus <- function(
-  # Data and column names
   data,
   y,
   time,
   area,
-
   start_time = NULL,
   end_time = NULL,
-
-  # Model settings
   transition_model = transition_model_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
-
-  # Out-of-sample validation
   held_out = FALSE,
-
   ...
 ) {
-  ###### Initial argument checks #####
+  ###### Initial argument checks
   checkmate::check_class(transition_model, "lifeplus_transition_model")
   checkmate::check_class(data_model, "lifeplus_data_model")
   checkmate::check_class(shock_model, "lifeplus_shock_model")

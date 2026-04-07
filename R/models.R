@@ -40,7 +40,7 @@ transition_model_double_logistic <- function(hierarchical = TRUE) {
 #' @param degree Spline degree
 #' @param num_knots Number of spline knots
 #'
-#' @param lifeplus_transition_model
+#' @return lifeplus_transition_model
 #' @export
 transition_model_spline <- function(degree = 2, num_knots = 7) {
   checkmate::check_integer(degree, lower = 1)
