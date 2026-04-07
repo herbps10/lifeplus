@@ -4,3 +4,5 @@
 ^src/modules$
 ^\.github$
 ^LICENSE\.md$
+^docs$
+^build_docs\.R$
