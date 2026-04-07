@@ -1,2 +1,6 @@
 ^lifeplus\.Rproj$
 ^\.Rproj\.user$
+^tools$
+^src/modules$
+^\.github$
+^LICENSE\.md$

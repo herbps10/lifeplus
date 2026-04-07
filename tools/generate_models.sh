@@ -1,0 +1,1 @@
+./stanmerge --config config.json

@@ -1,0 +1,88 @@
+# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+on:
+  push:
+    branches: [main]
+  pull_request:
+    brainches: [main]
+
+name: R-CMD-check.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }} 
+
+permissions: read-all
+
+jobs:
+  R-CMD-check:
+    if: "! contains(github.event.head_commit.message, '[ci skip]')"
+    runs-on: ${{ matrix.config.os }}
+
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest,   r: 'release'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      NOT_CRAN: true
+
+    steps:
+      - name: Set cmdstan path
+        run: |
+          echo "CMDSTAN_PATH=${HOME}/.cmdstan" >> $GITHUB_ENV
+        shell: bash
+
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache: "always"
+          dependencies: '"hard"'
+          extra-packages: any::rcmdcheck, local::.
+          needs: check
+
+      - name: Cache CmdStan
+        uses: actions/cache@v4
+        with: 
+          path: ~/.cmdstan
+          key: cmdstan-${{ runner.os }}-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            cmdstan-${{ runner.os }}-
+
+      - name: Install cmdstan
+        run: |
+          cmdstanr::check_cmdstan_toolchain()
+          if (!is.null(tryCatch(cmdstanr::cmdstan_path(), error = function(e) NULL))) {
+            message("CmdStan already installed at: ", cmdstanr::cmdstan_path())
+          } else {
+            cmdstanr::install_cmdstan(cores = 2)
+          }
+        shell: Rscript {0}
+
+      - name: Session info
+        run: |
+          options(width = 100)
+          pkgs <- installed.packages()[, "Package"]
+          sessioninfo::session_info(pkgs, include_base = TRUE)
+        shell: Rscript {0}
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--no-build-vignettes")'
+          args: 'c("--no-manual","--ignore-vignettes")'
+        env:
+          _R_CHECK_FORCE_SUGGESTS_: false

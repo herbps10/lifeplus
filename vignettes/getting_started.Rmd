@@ -1,0 +1,64 @@
+---
+title: "Getting started with lifeplus"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with lifeplus}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(lifeplus)
+
+```
+
+```{r wppdata}
+library(wpp2024)
+data(UNlocations, package = "wpp2024")
+data(e0M1, package = "wpp2024")
+```
+
+First, let's find the country codes for the countries we are interested in.
+```{r}
+country_codes <- UNlocations |>
+  dplyr::filter(name %in% c("Somalia", "Bosnia and Herzegovina")) |>
+  dplyr::pull(country_code)
+```
+
+The WPP data is in wide format. Let's convert it to long format, with a separate column for the year (called `year`) and the life expectancy (called `e0`).
+```{r}
+data <- e0M1 |>
+  dplyr::filter(country_code %in% country_codes) |>
+  tidyr::pivot_longer(cols = `1950`:`2023`, names_to = "year", values_to = "e0") |>
+  dplyr::mutate(year = as.numeric(year))
+```
+
+Now we are ready to fit the model.
+```{r}
+fit <- lifeplus(
+  data = data, 
+  y = "e0", 
+  time = "year", 
+  area = "name", 
+  end_time = 2050, 
+  transition_model = transition_model_double_logistic(hierarchical = FALSE),
+  data_model = data_model_normal(), 
+  shock = shock_model_regularized_horseshoe(),
+  iter_warmup = 500,
+  iter_sampling = 500,
+  parallel_chains = 4
+)
+```
+
+```{r}
+plot_transitions(fit)
+plot_shocks(fit)
+plot_projections(fit, data = FALSE)
+```
