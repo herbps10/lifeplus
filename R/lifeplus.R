@@ -33,7 +33,7 @@ library(splines)
 #' @param held_out A logical vector of length \code{nrow(data)} indicating
 #'   which observations to hold out from model fitting, or \code{NULL} (default)
 #'   to include all observations.
-#' @param ... additional arguments passed to CmdStanModel::sample.
+#' @param ... additional arguments passed to \code{CmdStanModel::sample}.
 #'
 #' @return An object of class \code{lifeplus}, which is a named list containing:
 #' \describe{
@@ -171,28 +171,25 @@ lifeplus <- function(
   # Augment stan_data with additional elements from data model
   if (!is.null(data_model$stan_data)) {
     if (is.function(data_model$stan_data)) {
-      stan_data <- c(stan_data, data_model$stan_data(data[[y]], grid))
-    } else {
-      stan_data <- c(stan_data, data_model$stan_data)
+      data_model$stan_data <- data_model$stan_data(data[[y]], grid)
     }
+    stan_data <- c(stan_data, data_model$stan_data)
   }
 
   # Augment stan_data with additional elements from transition model
   if (!is.null(transition_model$stan_data)) {
     if (is.function(transition_model$stan_data)) {
-      stan_data <- c(stan_data, transition_model$stan_data(data[[y]], grid))
-    } else {
-      stan_data <- c(stan_data, transition_model$stan_data)
+      transition_model$stan_data <- transition_model$stan_data(data[[y]], grid)
     }
+    stan_data <- c(stan_data, transition_model$stan_data)
   }
 
   # Augment stan_data with additional elements from shock model
   if (!is.null(shock_model$stan_data)) {
     if (is.function(shock_model$stan_data)) {
-      stan_data <- c(stan_data, shock_model$stan_data(data[[y]], grid))
-    } else {
-      stan_data <- c(stan_data, shock_model$stan_data)
+      shock_model$stan_data <- shock_model$stan_data(data[[y]], grid)
     }
+    stan_data <- c(stan_data, shock_model$stan_data)
   }
 
   # Sampling
@@ -257,6 +254,7 @@ lifeplus <- function(
 print.lifeplus <- function(x, ...) {
   cli::cli_rule(left = "{.strong lifeplus} model fit")
 
+  ##### Inputs #####
   n_areas <- length(x$areas)
   n_obs <- nrow(x$data)
   n_held_out <- sum(x$held_out)
@@ -276,13 +274,15 @@ print.lifeplus <- function(x, ...) {
   cli::cli_li("Observations: {.val {n_obs}} ({.val {n_held_out}} held out)")
   cli::cli_end()
 
-  cli::cli_h3("Submodels")
+  ##### Model components ######
+  cli::cli_h3("Model components")
   cli::cli_ul()
   cli::cli_li("Transition: {.emph {x$transition_model$name}}")
   cli::cli_li("Data: {.emph {x$data_model$name}}")
   cli::cli_li("Shock: {.emph {x$shock_model$name}}")
   cli::cli_end()
 
+  ##### Sampling #####
   cli::cli_h3("Sampling")
   n_chains <- length(x$samples$metadata()$id)
   n_iter <- x$samples$metadata()$iter_sampling
@@ -294,6 +294,7 @@ print.lifeplus <- function(x, ...) {
   cli::cli_li("Elapsed: {format(x$elapsed, digits = 3)}")
   cli::cli_end()
 
+  ##### Diagnostics #####
   diag <- x$diagnose
   n_divergent <- sum(diag$num_divergent)
   n_max_treedepth <- sum(diag$num_max_treedepth)

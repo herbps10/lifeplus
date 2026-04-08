@@ -51,7 +51,6 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           cache: "always"
-          dependencies: '"hard"'
           extra-packages: any::rcmdcheck, local::.
           needs: check
 
