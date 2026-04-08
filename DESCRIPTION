@@ -3,7 +3,7 @@ Title: Bayesian hierarchical life expectency models
 Version: 0.0.1
 Authors@R: 
     person("Herbert", "Susmann", "", "herbps10@gmail.com", role = c("aut", "cre"))
-Description: Modular modeling framework for life expectancy
+Description: This package constructs and fits modular life expectancy models.
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -15,6 +15,7 @@ Additional_repositories:
     https://mc-stan.org/r-packages/
 Imports: 
     checkmate,
+    cli,
     ggplot2,
     instantiate,
     posterior,

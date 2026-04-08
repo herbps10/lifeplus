@@ -4,6 +4,7 @@
 #' @param num_times number of time points to simulate
 #' @param seed optional random number seed
 #' @return data frame
+#' @importFrom stats runif rnorm
 #' @export
 simulate_lifeplus <- function(num_areas, num_times, seed = NULL) {
   checkmate::check_integer(num_areas, lower = 1)
@@ -18,12 +19,12 @@ simulate_lifeplus <- function(num_areas, num_times, seed = NULL) {
   times <- 1:num_times
 
   diffs <- matrix(
-    rnorm(num_areas * (num_times - 1), 1, 2),
+    stats::rnorm(num_areas * (num_times - 1), 1, 2),
     ncol = num_times - 1,
     nrow = num_areas
   )
 
-  y <- t(apply(cbind(runif(num_areas, 50, 70), diffs), 1, cumsum))
+  y <- t(apply(cbind(stats::runif(num_areas, 50, 70), diffs), 1, cumsum))
 
   data.frame(
     area = rep(areas, each = num_times),

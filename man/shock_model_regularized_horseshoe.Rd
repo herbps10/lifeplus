@@ -30,7 +30,7 @@ shock_model_regularized_horseshoe(
 \description{
 Regularized horseshoe prior model for shocks
 
-Regularized horseshoe prior model for shocks
+Regularized horseshoe prior model for shock terms.
 }
 \details{
 The regularized horseshoe prior aggressively shrinks the shock term to zero.

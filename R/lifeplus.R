@@ -1,19 +1,79 @@
 library(splines)
 
-#' Fit Lifeplus model
+#' Fit a Lifeplus Model
 #'
-#' @param data a data frame.
-#' @param y column name of outcome variable..
-#' @param time column name of time variable.
-#' @param area column name of the area of each observation
-#' @param start_time start time of estimates.
-#' @param end_time end time of estimates.
-#' @param transition_model transition model specification (default: `transition_model_logistic()`)
-#' @param data_model data model specification (default: `data_model_normal()`)
-#' @param shock_model shock term specification (default: `shock_model_none()`)
-#' @param held_out binary vector indicating which observations are held out. Set to FALSE to hold out no observations.
+#' @description
+#' Fits a Bayesian hierarchical model to life expectancy data using
+#' CmdStan. The model is composed of three components: a transition model,
+#' data model, and shock model, each of which may be configured independently.
+#'
+#' @details
+#' The function constructs a model from the chosen specifications, prepares
+#' the data, runs MCMC sampling via \code{\link[cmdstanr]{CmdStanModel}}, and returns
+#' an object of class \code{lifeplus} containing posterior draws, diagnostics, and
+#' metadata.
+#'
+#' All areas are assumed to have observations at every time point in the (non-held-out)
+#' data.
+#'
+#' @param data a data frame containing at least the columns specified by \code{y}, \code{time}, and \code{area}.
+#' @param y A string giving the name of the numeric outcome column in \code{data} (typically life expectancy in years).
+#' @param time A string giving the name of the integer-valued time column in \code{data} (e.g., calendar year).
+#' @param area A string giving the name of the column in \code{data} that identifies the geographic or administrative unit for each observation.
+#' @param start_time An integer specifying the first time point of the estimation window, or \code{NULL} (default)
+#'   to use \code{min(data[[time]])}.
+#' @param end_time An integer specifying the last time point of the projection window, or \code{NULL} (default)
+#'   to use \code{max(data[[time]])}.
+#' @param transition_model A transition model specification object created by a
+#'   \code{transition_model_*} constructor (default: \code{\link{transition_model_double_logistic}()}).
+#' @param data_model A data model specification object created by a
+#'   \code{data_model_*} constructor (default: \code{\link{data_model_normal}()}).
+#' @param shock_model A shock model specification object created by a
+#'   \code{shock_model_*} constructor (default: \code{\link{shock_model_none}()}).
+#' @param held_out A logical vector of length \code{nrow(data)} indicating
+#'   which observations to hold out from model fitting, or \code{NULL} (default)
+#'   to include all observations.
 #' @param ... additional arguments passed to CmdStanModel::sample.
 #'
+#' @return An object of class \code{lifeplus}, which is a named list containing:
+#' \describe{
+#'   \item{\code{samples}}{A \code{\link[cmdstanr]{CmdStanMCMC}} fit object.}
+#'   \item{\code{data}}{The original input data frame.}
+#'   \item{\code{stan_data}}{The named list passed to Stan.}
+#'   \item{\code{times}}{Integer vector of time-points in the estimation and projection window (\code{start_time:end_time})}
+#'   \item{\code{areas}}{Vector of unique area identifiers.}
+#'   \item{\code{grid}}{Grid of transition function inputs.}
+#'   \item{\code{elapsed}}{A \code{link{difftime}} object for wall-clock sampling time.}
+#'   \item{\code{posteriors}}{Posterior summaries.}
+#'   \item{\code{diagnose}}{MCMC diagnostic sumary from CmdStan.}
+#'   \item{\code{transition_model}, \code{data_model}, \code{shock_model}}{Model specifications used for this fit.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' example_life_data <- simulate_lifeplus(num_areas = 1, num_times = 40)
+#'
+#' fit <- lifeplus(
+#'   data = example_life_data,
+#'   y = "y",
+#'   time = "time",
+#'   area = "area",
+#'   transition_model = transition_model_double_logistic(hierarchical = FALSE),
+#'   data_model = data_model_normal(),
+#'   chains = 4,
+#'   parallel_chains = 4,
+#'   iter_warmup = 1000,
+#'   iter_sampling = 1000
+#' )
+#' }
+#'
+#' @seealso
+#' Transition models: \code{\link{transition_model_double_logistic}()},
+#'    \code{\link{transition_model_spline}()}, \code{\link{transition_model_gaussian_process}()},
+#'
+#' Data models: \code{\link{data_model_normal}()}, \code{\link{data_model_outlier}()}
+#'
+#' Shock models: \code{\link{shock_model_none}()}, \code{\link{shock_model_regularized_horseshoe}()}
 #'
 #' @export
 lifeplus <- function(
@@ -26,20 +86,20 @@ lifeplus <- function(
   transition_model = transition_model_double_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
-  held_out = FALSE,
+  held_out = NULL,
   ...
 ) {
   ###### Initial argument checks
-  checkmate::check_class(transition_model, "lifeplus_transition_model")
-  checkmate::check_class(data_model, "lifeplus_data_model")
-  checkmate::check_class(shock_model, "lifeplus_shock_model")
-  checkmate::check_data_frame(data, min.rows = 1)
-  checkmate::check_subset(y, colnames(data))
-  checkmate::check_subset(time, colnames(data))
-  checkmate::check_subset(area, colnames(data))
-  checkmate::check_integer(start_time, upper = end_time, null.ok = TRUE)
-  checkmate::check_integer(end_time, lower = start_time, null.ok = TRUE)
-  checkmate::check_logical(held_out, len = nrow(data))
+  checkmate::assert_class(transition_model, "lifeplus_transition_model")
+  checkmate::assert_class(data_model, "lifeplus_data_model")
+  checkmate::assert_class(shock_model, "lifeplus_shock_model")
+  checkmate::assert_data_frame(data, min.rows = 1)
+  checkmate::assert_subset(y, colnames(data))
+  checkmate::assert_subset(time, colnames(data))
+  checkmate::assert_subset(area, colnames(data))
+  checkmate::assert_integer(start_time, null.ok = TRUE)
+  checkmate::assert_integer(end_time, null.ok = TRUE)
+  checkmate::assert_logical(held_out, len = nrow(data), null.ok = TRUE)
 
   args <- list(...)
 
@@ -54,8 +114,12 @@ lifeplus <- function(
     end_time <- max(data[[time]])
   }
 
+  if (is.null(held_out)) {
+    held_out <- rep(FALSE, nrow(data))
+  }
+
   # Make sure the observed data are within the estimation period
-  checkmate::check_integer(data[[time]], lower = start_time, upper = end_time)
+  checkmate::assert_integer(data[[time]], lower = start_time, upper = end_time)
 
   check_model_compatibility(transition_model, data_model, shock_model)
 
@@ -175,4 +239,84 @@ lifeplus <- function(
   attr(result, "class") <- "lifeplus"
 
   result
+}
+
+#' Print a Lifeplus Model Fit
+#'
+#' @description
+#' Displays a concise summary of a fitted \code{lifeplus} model.
+#'
+#' @param x An object of class \code{lifeplus}, as returned by \code{\link{lifeplus}()}.
+#' @param ... Additional arguments passed to other methods (currently ignored).
+#'
+#' @return Invisibly returns \code{x}.
+#'
+#' @seealso \code{\link{lifeplus}()}
+#'
+#' @export
+print.lifeplus <- function(x, ...) {
+  cli::cli_rule(left = "{.strong lifeplus} model fit")
+
+  n_areas <- length(x$areas)
+  n_obs <- nrow(x$data)
+  n_held_out <- sum(x$held_out)
+  start_time <- min(x$times)
+  end_time <- max(x$times)
+  n_time <- length(x$times)
+
+  cli::cli_h3("Data")
+  cli::cli_ul()
+  cli::cli_li("Outcome variable: {.field {x$y}}")
+  cli::cli_li(
+    "Time variable: {.field {x$time}} ({.val {start_time}} to {.val {end_time}})"
+  )
+  cli::cli_li(
+    "Area variable: {.field {x$area}} ({.val {n_areas}} areas)"
+  )
+  cli::cli_li("Observations: {.val {n_obs}} ({.val {n_held_out}} held out)")
+  cli::cli_end()
+
+  cli::cli_h3("Submodels")
+  cli::cli_ul()
+  cli::cli_li("Transition: {.emph {x$transition_model$name}}")
+  cli::cli_li("Data: {.emph {x$data_model$name}}")
+  cli::cli_li("Shock: {.emph {x$shock_model$name}}")
+  cli::cli_end()
+
+  cli::cli_h3("Sampling")
+  n_chains <- length(x$samples$metadata()$id)
+  n_iter <- x$samples$metadata()$iter_sampling
+  n_warmup <- x$samples$metadata()$iter_warmup
+
+  cli::cli_ul()
+  cli::cli_li("Chains: {.val {n_chains}}")
+  cli::cli_li("Iterations: {.val {n_warmup}} warmup + {.val {n_iter}} sampling")
+  cli::cli_li("Elapsed: {format(x$elapsed, digits = 3)}")
+  cli::cli_end()
+
+  diag <- x$diagnose
+  n_divergent <- sum(diag$num_divergent)
+  n_max_treedepth <- sum(diag$num_max_treedepth)
+  any_low_ebfmi <- any(diag$ebfmi < 0.3)
+
+  cli::cli_h3("Diagnostics")
+  if (n_divergent > 0) {
+    cli::cli_alert_danger("{.val {n_divergent}} divergent transition{?s}")
+  } else {
+    cli::cli_alert_success("No divergent transitions")
+  }
+  if (n_max_treedepth > 0) {
+    cli::cli_alert_danger(
+      "{.val {n_max_treedepth}} transition{?s} hit max treedepth"
+    )
+  } else {
+    cli::cli_alert_success("No max treedepth warnings")
+  }
+  if (any_low_ebfmi) {
+    cli::cli_alert_danger("Low E-BFMI detected (< 0.3)")
+  } else {
+    cli::cli_alert_success("No E-BFMI warnings")
+  }
+
+  invisible(x)
 }

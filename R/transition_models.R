@@ -35,9 +35,9 @@ transition_model_spline <- function(
   degree = 2,
   knots = 7
 ) {
-  checkmate::check_flag(hierarchical)
-  checkmate::check_integer(degree, lower = 1)
-  checkmate::check_integer(knots, lower = 1)
+  checkmate::assert_flag(hierarchical)
+  checkmate::assert_integer(degree, lower = 1)
+  checkmate::assert_integer(knots, lower = 1)
 
   f <- function(y, grid) {
     knots_vec <- sort(c(seq(0, max(y) / 110, length.out = knots), 1, 2))
@@ -102,9 +102,9 @@ transition_model_gaussian_process <- function(
   basis_functions = 20,
   boundary_factor = 1.5
 ) {
-  checkmate::check_flag(hierarchical)
-  checkmate::check_integer(basis_functions, lower = 1)
-  checkmate::check_integer(boundary_factor, lower = 1)
+  checkmate::assert_flag(hierarchical)
+  checkmate::assert_integer(basis_functions, lower = 1)
+  checkmate::assert_integer(boundary_factor, lower = 1)
 
   x <- list(
     name = "gaussian_process",

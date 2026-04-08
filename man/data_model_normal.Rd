@@ -18,7 +18,7 @@ lifeplus_data_model
 Normal data model
 }
 \details{
-The residuals are modeled as $\epsilon_{c,t} \sim N(0, \sigma^2)$.
-The prior for the residual scale parameter is $\sigma \sim N(m, s^2)$,
-where $m$ and $s$ are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
+The residuals are modeled as \eqn{\epsilon_{c,t} \sim N(0, \sigma^2)}.
+The prior for the residual scale parameter is \eqn{\sigma \sim N(m, s^2)},
+where \eqn{m} and \eqn{s} are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
 }

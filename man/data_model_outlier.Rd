@@ -21,7 +21,7 @@ Outlier data model
 }
 \details{
 Any observed absolute differences in life expectancy greater than the user-specified outlier threshold (\code{outlier_threshold}) are ignored.
-The remaining residuals are modeled as in the normal data model:  $\epsilon_{c,t} \sim N(0, \sigma^2)$.
-The prior for the residual scale parameter is $\sigma \sim N(m, s^2)$,
-where $m$ and $s$ are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
+The remaining residuals are modeled as in the normal data model:  \eqn{\epsilon_{c,t} \sim N(0, \sigma^2)}.
+The prior for the residual scale parameter is \eqn{\sigma \sim N(m, s^2)},
+where \eqn{m} and \eqn{s} are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
 }
