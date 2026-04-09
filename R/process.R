@@ -188,7 +188,7 @@ process_shock_params <- function(fit, n_cores, posterior_quantiles) {
 #'
 #' @noRd
 #' @keywords internal
-process_shock_params <- function(fit, n_cores, posterior_quantiles) {
+process_data_params <- function(fit, n_cores, posterior_quantiles) {
   extractor <- fit$data_model$extract_params
   if (is.null(extractor)) {
     return(NULL)
@@ -240,6 +240,11 @@ lifeplus_posteriors <- function(
       n_cores,
       posterior_quantiles
     ),
+    data_params = process_data_params(
+      fit,
+      n_cores,
+      posterior_quantiles
+    )
   )
 
   if (fit$shock_model$name != "none") {
@@ -257,10 +262,99 @@ lifeplus_posteriors <- function(
       posterior_quantiles
     )
 
-    value_shock_params <- process_shock_params(
+    value$shock_params <- process_shock_params(
       fit,
       n_cores,
       posterior_quantiles
     )
   }
+
+  value
+}
+
+#' Estimates validation metrics for held-out data
+#'
+#' @param fit a (partially constructed) fit object
+process_validation <- function(fit) {
+  cutoff_time <- fit$cutoff_time
+  times <- fit$times
+  area <- fit$area
+  time <- fit$time
+  y <- fit$y
+  posterior_quantiles <- fit$posterior_quantiles
+
+  held_out_times <- intersect(
+    unique(fit$data[[time]]),
+    fit$times[times > cutoff_time]
+  )
+
+  held_out_observations <- fit$data[
+    fit$data[[time]] > cutoff_time,
+    c(area, time, y)
+  ]
+  held_out_observations$y <- held_out_observations[[y]]
+  held_out_observations[[y]] <- NULL
+
+  result <- list()
+
+  result$life <- merge(
+    x = fit$posteriors$life[fit$posteriors$life$time %in% held_out_times, ],
+    y = held_out_observations,
+    by.x = c("area", "time"),
+    by.y = c(area, time)
+  )
+  result$life <- validation_metrics(result$life, posterior_quantiles)
+
+  if (fit$shock_model$name != "none") {
+    result$shockfree <- merge(
+      x = fit$posteriors$life[fit$posteriors$life$time %in% held_out_times, ],
+      y = held_out_observations,
+      by.x = c("area", "time"),
+      by.y = c(area, time)
+    )
+    result$shockfree <- validation_metrics(
+      result$shockfree,
+      posterior_quantiles
+    )
+  }
+
+  result
+}
+
+validation_metrics <- function(df, posterior_quantiles) {
+  df$error <- validation_metric_error(df)
+  intervals <- posterior_intervals(posterior_quantiles)
+  for (interval in intervals) {
+    ci_width_name <- paste0("ci_width", interval * 100, "%")
+    df[[ci_width_name]] <- validation_metric_ci_width(df, interval)
+    covered_name <- paste0("covered", interval * 100, "%")
+    df[[covered_name]] <- validation_metric_covered(df, interval)
+  }
+  df
+}
+
+validation_metric_error <- function(df) {
+  df$y - df[["50%"]]
+}
+
+validation_metric_covered <- function(df, interval) {
+  low <- paste0((1 - interval) / 2 * 100, "%")
+  high <- paste0((1 - (1 - interval) / 2) * 100, "%")
+  df$y >= df[[low]] & df$y <= df[[high]]
+}
+
+validation_metric_ci_width <- function(df, interval) {
+  low <- paste0((1 - interval) / 2 * 100, "%")
+  high <- paste0((1 - (1 - interval) / 2) * 100, "%")
+  df[[high]] - df[[low]]
+}
+
+posterior_intervals <- function(posterior_quantiles) {
+  intervals <- c()
+  for (p in posterior_quantiles) {
+    if ((1 - p) %in% posterior_quantiles) {
+      intervals <- c(intervals, 1 - min(p, 1 - p) * 2)
+    }
+  }
+  unique(setdiff(intervals, c(0, 0.5)))
 }

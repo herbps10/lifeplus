@@ -14,7 +14,7 @@ lifeplus(
   transition_model = transition_model_double_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
-  held_out = NULL,
+  cutoff_time = NULL,
   posterior_quantiles = lifeplus_default_posterior_quantiles(),
   ...
 )
@@ -43,12 +43,11 @@ to use \code{max(data[[time]])}.}
 \item{shock_model}{A shock model specification object created by a
 \code{shock_model_*} constructor (default: \code{\link{shock_model_none}()}).}
 
-\item{held_out}{A logical vector of length \code{nrow(data)} indicating
-which observations to hold out from model fitting, or \code{NULL} (default)
-to include all observations.}
+\item{cutoff_time}{A integer specifying the final time point to include in the analysis. All time points after
+\code{cutoff_time} are held-out from the model fit. Setting \code{cutoff_time = NULL} (default) does not hold out any data.}
 
 \item{posterior_quantiles}{A numeric vector of probabilities in \code{(0, 1)}
-at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_quantiles}()}, which provides
+at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_posterior_quantiles}()}, which provides
 a fine grid from the 0.1\% to 99.9\% quantile.}
 
 \item{...}{additional arguments passed to \code{CmdStanModel::sample}.}
@@ -65,6 +64,7 @@ An object of class \code{lifeplus}, which is a named list containing:
 \item{\code{elapsed}}{A \code{link{difftime}} object for wall-clock sampling time.}
 \item{\code{posteriors}}{Posterior summaries.}
 \item{\code{diagnose}}{MCMC diagnostic sumary from CmdStan.}
+\item{\code{validation}}{Validation results for held-out observations, including error and whether the posterior intervals cover the true value of the outcome.}
 \item{\code{posterior_quantiles}}{The numeric vector of quantile probabilities used for posterior summaries.}
 \item{\code{transition_model}, \code{data_model}, \code{shock_model}}{Model specifications used for this fit.}
 }

@@ -9,6 +9,7 @@ plot_projections(
   areas = fit$areas,
   start_time = min(fit$times),
   end_time = max(fit$times),
+  shockfree = FALSE,
   data = TRUE
 )
 }
@@ -21,7 +22,9 @@ plot_projections(
 
 \item{end_time}{final time point to plot (defaults to final projection time point)}
 
-\item{data}{logical indicating whether to plot raw data (default: TRUE)}
+\item{shockfree}{Logical; whether to plot projections with shock terms (default) or with shocks excluded (requires model fitted with shock component)}
+
+\item{data}{Logical; whether to plot raw data (default: TRUE)}
 }
 \value{
 ggplot2 plot

@@ -13,9 +13,16 @@ load_model <- function(transition_model, data_model, shock_model) {
 check_model_compatibility <- function(
   transition_model,
   data_model,
-  shock_model
+  shock_model,
+  error = TRUE
 ) {
   if (data_model$name == "outlier" & shock_model$name != "none") {
-    stop("data_model_outlier can only be used with shock_model_none")
+    if (error) {
+      cli::cli_abort(
+        "data_model_outlier can only be used with shock_model_none"
+      )
+    }
+    return(FALSE)
   }
+  return(TRUE)
 }

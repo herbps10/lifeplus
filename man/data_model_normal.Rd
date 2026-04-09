@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_models.R
 \name{data_model_normal}
 \alias{data_model_normal}
-\title{Normal data model}
+\title{Normal Data Model}
 \usage{
 data_model_normal(prior_mean = 0, prior_sd = 1)
 }

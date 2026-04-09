@@ -2,10 +2,15 @@
 % Please edit documentation in R/shock_models.R
 \name{shock_model_none}
 \alias{shock_model_none}
-\title{No shock model}
+\title{No Shock Model}
 \usage{
 shock_model_none()
 }
 \description{
 Fixes all shock terms to zero.
+
+#' @return object of type \code{lifeplus_shock_model}, a named list constaining:
+\describe{
+\item{\code{name}}{Character string \code{"none"}}
+}
 }

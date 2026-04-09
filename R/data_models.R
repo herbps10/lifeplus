@@ -1,4 +1,4 @@
-#' Normal data model
+#' Normal Data Model
 #'
 #' @description
 #' White noise data model that assumes the residuals follow independent mean-zero normal distributions.
@@ -7,6 +7,7 @@
 #' The residuals are modeled as \eqn{\epsilon_{c,t} \sim N(0, \sigma^2)}.
 #' The prior for the residual scale parameter is \eqn{\sigma \sim N(m, s^2)},
 #' where \eqn{m} and \eqn{s} are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
+#'
 #' @param prior_mean Prior mean for white noise standard deviation
 #' @param prior_sd Prior standard deviation for white noise standard deviation
 #'
@@ -53,16 +54,18 @@ normal_print_info <- function(x) {
   cli::cli_end()
 }
 
-#' Outlier data model
+#' Outlier Data Model
 #'
-#' @param outlier_threshold threshold for ignoring observed life expectancy differences.
-#' @param prior_mean Prior mean for white noise standard deviation
-#' @param prior_sd Prior standard deviation for white noise standard deviation
+#'
 #' @details
 #' Any observed absolute differences in life expectancy greater than the user-specified outlier threshold (`outlier_threshold`) are ignored.
 #' The remaining residuals are modeled as in the normal data model:  \eqn{\epsilon_{c,t} \sim N(0, \sigma^2)}.
 #' The prior for the residual scale parameter is \eqn{\sigma \sim N(m, s^2)},
 #' where \eqn{m} and \eqn{s} are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
+#'
+#' @param outlier_threshold threshold for ignoring observed life expectancy differences.
+#' @param prior_mean Prior mean for white noise standard deviation
+#' @param prior_sd Prior standard deviation for white noise standard deviation
 #'
 #' @return lifeplus_data_model
 #' @export
@@ -113,7 +116,6 @@ outlier_print_info <- function(x) {
   cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
   cli::cli_end()
 }
-
 
 #' Print a Lifeplus Data Model Specification
 #'

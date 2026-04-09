@@ -22,142 +22,277 @@ library(ggplot2)
 ```
 
 ## Introduction
-The `lifeplus` package allows you to fit a variety of Bayesian hierarchical models to life expectancy data. The models are modular, allowing you to mix and match multiple types of model components. 
+The `lifeplus` package allows you to fit a variety of Bayesian hierarchical models to life expectancy data. The models are modular, allowing you to mix and match multiple types of model components (Susmann, Alexander, and Alkema 2022). 
 
-Let $c = 1, \dots, C$ index the areas (typically countries) and $t = 1, \dots, T$ index time points (typically years). Let $y_{c,t}$ be the observed life expectancy in area $c$ at time $t$. The model takes the form
+### The model
+Let $c = 1, \dots, C$ index the areas (typically countries) and $t = 1, \dots, T$ index time points (typically years). Let $y_{c,t}$ be the observed life expectancy at birth in area $c$ at time $t$. The core of the model is the following equation:
 
 $$
-\mathrm{logit}\left(y_{c,t}\right) = g\left(y_{c,t-1}, \beta_c\right) + \delta_{c,t} + \epsilon_{c,t}
+y_{c,t} = y_{c,t-1} + g\left(y_{c,t-1}, \beta_c\right) + \delta_{c,t} + \epsilon_{c,t}
 $$
 
 where
 
-- $g$ is a _transition model_ with area-specific parameters $\beta_c$.
-- $\delta_{c,t}$ is a shock term, to which a _shock model_ is applied.
-- $\epsilon_{c,t}$ is a residual modeled by a _data model_.
+- $g(\cdot)$ is a **transition function** that models the expected rate of change of the outcome as a function of its previous level, using area-specific parameters $\beta_c$. This term captures long-term, systematic trends in life expectancy.
+- $\delta_{c,t}$ is a **shock term** representing large departures from the overall trend.
+- $\epsilon_{c,t}$ is a **residual** capturing short-term departures from the overall trend, which we model with a data model.
 
-Multiple options are available for each of these models. Each model may have additional configuration options; to learn about the options that are available, you can check the documentation of each function (e.g, `?transition_model_double_logistic`). 
+Each of these three components can be configured independently. For full details on the available options, see the documentation for each constructor (e.g, `?transition_model_double_logistic`). 
 
 ### Transition models
 
 - **Double logistic**: `transition_model_double_logistic`. The transition is modeled by a parametric double logistic function (Raftery et al. 2013). 
 - **Spline**: `transition_model_spline`. The transition is modeled by a B-spline function.
-- **Gaussian Process**: `transition_model_gaussian_process`. The transition function is assigned a Gaussian Process prior, approximated using a basis function expansion method.
+- **Gaussian Process**: `transition_model_gaussian_process`. The transition function is assigned a Gaussian Process prior, approximated using a basis function expansion method (Riutort-Mayol et al. 2023).
+
+All transition models support a `hierarchical` option that enables partial pooling of transition parameters across areas.
 
 ### Shock models
 
 - **None**: `shock_model_none`. All shock terms are fixed to zero: $\delta_{c,t} = 0$.
-- **Regularized horseshoe**: `shock_model_regularized_horseshoe`. Shock terms are modeled with a regularized horseshoe prior (Piironen and Vehtari 2017). 
+- **Regularized horseshoe**: `shock_model_regularized_horseshoe`. Sparse shrinkage prior that allows a small number of large shocks (Piironen and Vehtari 2017). 
 
 ### Data models
 - **Normal**: `data_model_normal`. The residuals are modeled as $\epsilon_{c,t} \sim N\left(0, \sigma^2\right)$.
-- **Outlier**:  `data_model_outlier` . Any absolute life expectancy differences larger than a user-specified threshold are ignored. The remaining observations are modeled as $\epsilon_{c,t} \sim N\left(0, \sigma^2\right)$. 
+- **Outlier**:  `data_model_outlier`. Observations with absolute differences exceeding a threshold are excluded; remaining residuals are normal.
 
-## Fitting World Population Prospect Data
+## World Population Prospect Data
+We use male life expectancy estimates from the [United Nations World Population Prospects 2024](https://population.un.org/wpp/), available through the [`wpp2024`](https://github.com/PPgp/wpp2024) R package.
 
-### Data
-Data are from the [United Nations World Population Prospects](https://population.un.org/wpp/) R package for their 2024 report, called [`wpp2024`](https://github.com/PPgp/wpp2024):
+We'll work with Bosnia and Herzegovina as an initial example.
+
 ```{r wppdata}
 library(wpp2024)
 data(UNlocations, package = "wpp2024")
 data(e0M1, package = "wpp2024")
-```
 
-First, let's find the country codes for the countries we are interested in. To start, we will fit the model to a single country: Colombia
-```{r}
-country_codes <- UNlocations |>
-  dplyr::filter(name == "Colombia") |>
+bosnia_herzegovina_codes <- UNlocations |>
+  dplyr::filter(name == "Bosnia and Herzegovina") |>
   dplyr::pull(country_code)
-```
 
-The WPP data is in wide format. Let's convert it to long format, with a separate column for the year (called `year`) and the life expectancy (called `e0`).
-```{r}
-data <- e0M1 |>
-  dplyr::filter(country_code %in% country_codes) |>
-  tidyr::pivot_longer(cols = `1950`:`2023`, names_to = "year", values_to = "e0") |>
+bosnia_herzegovina <- e0M1 |>
+  dplyr::filter(country_code %in% bosnia_herzegovina_codes) |>
+  tidyr::pivot_longer(
+    cols = `1950`:`2023`, 
+    names_to = "year", 
+    values_to = "e0"
+  ) |>
   dplyr::mutate(year = as.numeric(year))
 ```
 
-```{r}
+```{r bosnia_herzegovina-data-plot}
 ggplot(data, aes(x = year, y = e0)) +
   geom_point() +
-  labs(x = "Year", y = "Male life expectancy at birth (e0)", title = "Colombia")
+  labs(
+    x = "Year", 
+    y = "Male life expectancy at birth (e0)", 
+    title = "Bosnia and Herzegovina"
+  )
 ```
 
-### Modeling with `lifeplus`
+## Fitting a basic model
 
-Now we are ready to fit the first model. Let's start with a double logistic transition model, normal data model, and no shock model (all shock terms fixed to zero):
-```{r model_one}
-fit <- lifeplus(
-  data = data, 
-  y = "e0", 
-  time = "year", 
-  area = "name", 
-  end_time = 2050, 
+Before fitting models, let's define a wrapper with shared sampling settings. This helps us keep the examples concise, and ensures we use the same MCMC settings across all the models we fit:
+```{r wrapper}
+my_lifeplus <- function(data, ...) {
+  lifeplus(
+    data = data, 
+    y = "e0", 
+    time = "year", 
+    area = "name", 
+    end_time = 2050, 
+    iter_warmup = 1e3,
+    iter_sampling = 1e3,
+    refresh = 0,
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    parallel_chains = 4,
+    adapt_delta = 0.99,
+    ...
+  )
+}
+```
+
+We start with a simple configuration: a double logistic transition model, normal data model, and no shock terms. As we're fitting a single country, hierarchical estimation across areas is not applicable, so we set `hierarchical = FALSE`: 
+
+```{r fit-basic}
+fit_basic <- my_lifeplus(
+  data = bosnia_herzegovina,
   transition_model = transition_model_double_logistic(hierarchical = FALSE),
   data_model = data_model_normal(), 
-  shock = shock_model_none(),
-  iter_warmup = 1e3,
-  iter_sampling = 1e3,
-  refresh = 0,
-  show_messages = FALSE,
-  show_exceptions = FALSE,
-  parallel_chains = 4
+  shock_model = shock_model_none()
 )
 ```
 
-The default `print` function gives some basic information about the fit:
-```{r}
-print(fit)
+The `print` method gives a quick overview of the fit:
+```{r print-basic}
+print(fit_basic)
 ```
 
-We can also look at posterior summaries using `summary`. Let's use it to take a look at the posterior projections through 2030:
-```{r}
-print.summary.lifeplus(summary.lifeplus(fit, times = 2024:2030))
+We can examine posterior summaries with `summary`. Here are the projected estimates for 2024-2030:
+```{r summary-basic}
+summary(fit_basic, times = 2024:2030)
 ```
 
-The `plot_projections` function plots the posterior model projections.
-```{r model_one_projections}
-plot_projections(fit, data = FALSE)
+The `plot_projections` function shows the posterior projections overlaid on the observed data:
+```{r plot-basic-projections}
+plot_projections(fit_basic, data = TRUE)
 ```
 
-The `plot_transitions` function plots the posterior of the estimated transition function:
-```{r model_one_transitions}
-plot_transitions(fit)
+The `plot_transitions` function shows the estimated transition function (the expected rate of change in male life expectancy as a function of its level):
+```{r plot-basic-transitions}
+plot_transitions(fit_basic)
 ```
 
-Let's try fitting the model again, but this time swapping in a regularized horseshoe prior for the shock term:
-```{r model_shocks}
-fit_shocks <- lifeplus(
-  data = data, 
-  y = "e0", 
-  time = "year", 
-  area = "name", 
-  end_time = 2050, 
-  transition_model = transition_model_double_logistic(hierarchical = TRUE),
+## Adding shock terms
+
+By adding a regularized horseshoe shock model, we can allow the model attribute large deviations in life expectancy to specific country-years, allowing the underlying transition model to capture longer-term smooth trends.
+
+```{r fit-shocks}
+fit_shocks <- my_lifeplus(
+  data = bosnia_herzegovina, 
+  transition_model = transition_model_double_logistic(hierarchical = FALSE),
   data_model = data_model_normal(), 
-  shock = shock_model_regularized_horseshoe(scale_global = 0.1),
-  iter_warmup = 500,
-  iter_sampling = 500,
-  refresh = 0,
-  show_messages = FALSE,
-  show_exceptions = FALSE,
-  parallel_chains = 4
+  shock_model = shock_model_regularized_horseshoe(scale_global = 0.1)
 )
 ```
 
-```{r model_two_plots}
-plot_transitions(fit_shocks)
-plot_projections(fit_shocks, data = FALSE)
+```{r plot-shocks-projections}
+plot_projections(fit_shocks)
 ```
 
-We can also plot the estimated shock terms from this model:
-```{r model_two_shocks}
+The estimated shock terms reveal when the model detected large short-term deviations from the expected trend:
+```{r plot-shocks}
 plot_shocks(fit_shocks)
 ```
 
+The transition function now better captures the shape of the data, and exhibits tighter uncertainty estimates than the basic model without shocks:
+```{r plot-shocks-transitions}
+plot_transitions(fit_shocks)
+```
+
+## Validating models
+
+We can assess predictive performance by holding out recent data. Setting `cutoff_time = 2015` fits the model using only data up to 2015. We can then evaluate how well the projections match the observed 2016-2023 values:
 ```{r}
-print.summary.lifeplus(summary.lifeplus(fit_shocks, "shocks"))
+fit_valid_basic <- my_lifeplus(
+  data = bosnia_herzegovina,
+  transition_model = transition_model_double_logistic(hierarchical = FALSE),
+  data_model = data_model_normal(), 
+  shock_model = shock_model_none(),
+  cutoff_time = 2015
+)
+
+fit_valid_shocks <- my_lifeplus(
+  data = bosnia_herzegovina,
+  transition_model = transition_model_double_logistic(hierarchical = FALSE),
+  data_model = data_model_normal(), 
+  shock_model = shock_model_regularized_horseshoe(scale_global = 0.1),
+  cutoff_time = 2015
+)
+```
+
+The projection plots automatically distinguish the held-out observations:
+```{r plot-validation}
+plot_projections(fit_valid_basic, data = TRUE) + ggtitle("Basic")
+plot_projections(fit_valid_shocks, data = TRUE) + ggtitle("Shocks")
+```
+
+The `glance` method returns a one-row tibble with MCMC diagnostics and validation metrics, making it easy to compare models:
+```{r glance-comparison}
+dplyr::bind_rows(
+  glance(fit_valid_basic) |> dplyr::mutate(model = "basic"),
+  glance(fit_valid_shocks) |> dplyr::mutate(model = "shocks")
+) |>
+  dplyr::select(model, mean_error, ci.width)
+```
+
+The validation results show the models perform similarly in terms of error, but the model that allows for shocks has a much smaller 95\% credible interval width. We can drill into this further by looking at the estimated parameters for the residual:
+```{r residual-comparison}
+summary(fit_valid_basic, component = "data_params")
+summary(fit_valid_shocks, component = "data_params")
+```
+
+The posterior median of the residual standard deviation parameter (`\sigma_\epsilon`) is about 10 times higher in the basic model than the shocks model. Without the shock term, the basic model has to use the residuals to model the large changes in life expectancy, which subsequently drives up the variance of the projections.
+
+## Hierarchical estimation with multiple countries
+
+Hierarchical estimation allows for the transition functions to borrow information across countries. To illustrate, let's fit a model to multiple East African countries.
+
+```{r data-multi}
+east_africa_names <- c("Somalia", "Ethiopia", "Kenya", "Djibouti")
+east_africa_codes <- UNlocations |>
+  dplyr::filter(name %in% east_africa_names) |>
+  dplyr::pull(country_code)
+
+east_africa <- e0M1 |>
+  dplyr::filter(country_code %in% east_africa_codes) |>
+  tidyr::pivot_longer(
+    cols = `1950`:`2023`,
+    names_to = "year",
+    values_to = "e0"
+  ) |>
+  dplyr::mutate(year = as.numeric(year))
+```
+
+```{r plot-multi-data}
+ggplot(east_africa, aes(x = year, y = e0, color = name)) +
+  geom_point() +
+  labs(
+    x = "Year",
+    y = "Male life expectancy at birth",
+    title = "East Africa"
+  )
+```
+
+Next, fit the model with `hierarchical = TRUE` to estimate the double logistic parameters hierarchically across countries:
+```{r fit-multi}
+fit_hier <- my_lifeplus(
+  data = east_africa,
+  transition_model = transition_model_double_logistic(hierarchical = TRUE),
+  data_model = data_model_normal(),
+  shock_model = shock_model_regularized_horseshoe(scale_global = 0.1)
+)
+```
+
+```{r plot-multi-projections}
+plot_projections(fit_hier, data = FALSE)
+```
+
+We can also fit the model with `hierarchical = FALSE` to estimate the double logistic parameters separately in each country:
+```{r fit-multi-indep}
+fit_indep <- my_lifeplus(
+  data = east_africa,
+  transition_model = transition_model_double_logistic(hierarchical = FALSE),
+  data_model = data_model_normal(),
+  shock_model = shock_model_regularized_horseshoe(scale_global = 0.1)
+)
+```
+
+```{r plot-multi-projections-indep}
+plot_projections(fit_indep, data = FALSE)
+```
+
+
+## Working with results
+The `tidy` method extracts posterior estimates as a tibble, making results easy to use with `dplyr` and `ggplot2`.
+
+```{r tidy-example}
+tidy(fit_hier) |>
+  dplyr::filter(area == "Somalia", time >= 2020) |>
+  head(10)
+```
+
+We can use this to easily develop custom visualizations. For example, let's directly compare on the same plot the posterior median projections from East Africa with and without hierarchical estimation of the transition parameters:
+
+```{r tidy-comparison}
+dplyr::bind_rows(
+  tidy(fit_hier) |> dplyr::mutate(model = "hierarchical"),
+  tidy(fit_indep) |> dplyr::mutate(model = "independent")
+) |>
+  ggplot(aes(x = time, y = estimate, color = model)) +
+  geom_line() +
+  facet_wrap(~area)
 ```
 
 ## References

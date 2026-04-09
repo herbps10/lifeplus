@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_models.R
 \name{data_model_outlier}
 \alias{data_model_outlier}
-\title{Outlier data model}
+\title{Outlier Data Model}
 \usage{
 data_model_outlier(outlier_threshold = 5, prior_mean = 0, prior_sd = 1)
 }
@@ -17,7 +17,7 @@ data_model_outlier(outlier_threshold = 5, prior_mean = 0, prior_sd = 1)
 lifeplus_data_model
 }
 \description{
-Outlier data model
+Outlier Data Model
 }
 \details{
 Any observed absolute differences in life expectancy greater than the user-specified outlier threshold (\code{outlier_threshold}) are ignored.

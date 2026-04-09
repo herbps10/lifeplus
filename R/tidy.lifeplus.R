@@ -2,15 +2,15 @@
 #'
 #' @description
 #' Extracts posterior summaries from a fitted \code{lifeplus} model as a tidy tibble,
-#' following the conventions of the \href{https://broom.tidymodels.org/}{broom} package.
+#' following the conventions of the \code{broom} package.
 #' Each row represents one parameter (area x time combination) with its posterior median and
 #' credible interval.
 #'
 #' @param x An object of class \code{lifeplus}, as returned by \code{\link{lifeplus}()}.
 #' @param conf.level A scalar in \code{(0, 1)} specifying the credible interval width.
-#'   Defaults to \code{0.95} (i.e., a 95\% interval).
+#'   Defaults to \code{0.95} (i.e., a 95% interval).
 #' @param component A character string specifying which variable to extract.
-#'   One of \code{"eta"} (default), \code{"shocks"}, or \code{"eta_shockfree"}. The latter two
+#'   One of \code{"life"} (default), \code{"shocks"}, or \code{"shockfree"}. The latter two
 #'   require the presence of a shock model.
 #' @param ... Additional arguments (currently ignored)
 #'
@@ -29,11 +29,13 @@
 #'
 #' @importFrom generics tidy
 #' @importFrom tibble tibble
+#'
 #' @export
 tidy.lifeplus <- function(
   x,
   conf.level = 0.95,
-  component = c("life", "shocks", "shockfree")
+  component = c("life", "shocks", "shockfree"),
+  ...
 ) {
   component <- match.arg(component)
   checkmate::assert_number(conf.level, lower = 0, upper = 1)

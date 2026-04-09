@@ -7,7 +7,7 @@
 \method{summary}{lifeplus}(
   object,
   component = c("life", "shocks", "shockfree", "transition_functions",
-    "transition_function_mean", "transition_params", "all"),
+    "transition_function_mean", "transition_params", "data_params", "data_params", "all"),
   areas = NULL,
   times = NULL,
   ...

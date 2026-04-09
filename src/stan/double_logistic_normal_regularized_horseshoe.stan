@@ -71,6 +71,7 @@ data {
   real<lower=0> scale_global;
   real<lower=0> slab_scale;
   real<lower=0> slab_df;
+  real<lower=0> nu_local;
   int<lower=0, upper=1> constrain_negative;
   
   real<lower=0> epsilon_sigma_prior_mu;
@@ -105,7 +106,6 @@ transformed data {
   shock_term = 1;
   generate_shock_free = 1;
   real tau = scale_global;
-  int nu_local = 3;
 }
 parameters {
   vector<upper=(constrain_negative == 1 ? 0 : positive_infinity())>[C

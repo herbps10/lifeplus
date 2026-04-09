@@ -53,35 +53,34 @@ summary.lifeplus <- function(
     "transition_functions",
     "transition_function_mean",
     "transition_params",
+    "data_params",
+    "data_params",
     "all"
   ),
   areas = NULL,
   times = NULL,
   ...
 ) {
+  acceptable_components <- c(
+    "life",
+    "shocks",
+    "shockfree",
+    "transition_functions",
+    "transition_function_mean",
+    "transition_params",
+    "data_params",
+    "shock_params",
+    "all"
+  )
   checkmate::assert_subset(
     component,
-    c(
-      "life",
-      "shocks",
-      "shockfree",
-      "transition_functions",
-      "transition_function_mean",
-      "transition_params",
-      "all"
-    )
+    acceptable_components
   )
   component <- match.arg(component)
 
   components <- component
   if (component == "all") {
-    components <- c(
-      "temporal",
-      "transition_functions",
-      "transition_function_mean",
-      "transition_params",
-      "all"
-    )
+    components <- setdiff(acceptable_components, "all")
   }
 
   estimates <- lapply(components, function(component) {
@@ -90,7 +89,7 @@ summary.lifeplus <- function(
       return(NULL)
     }
 
-    if (component == "transition_params") {
+    if (component %in% c("transition_params", "data_params", "shock_params")) {
       est <- est$params
     }
 
@@ -149,6 +148,10 @@ summary.lifeplus <- function(
 #' @param ... Additional arguments (currently ignored).
 #'
 #' @return Invisibly returns \code{x}.
+#'
+#' @seealso \code{\link{summary.lifeplus}()}
+#'
+#' @export
 print.summary.lifeplus <- function(x, n = 10, ...) {
   cli::cli_rule(left = "{.strong lifeplus} summary")
 

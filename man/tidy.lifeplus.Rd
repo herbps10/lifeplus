@@ -4,16 +4,16 @@
 \alias{tidy.lifeplus}
 \title{Tidy a Lifeplus Model Fit}
 \usage{
-\method{tidy}{lifeplus}(x, conf.level = 0.95, component = c("life", "shocks", "shockfree"))
+\method{tidy}{lifeplus}(x, conf.level = 0.95, component = c("life", "shocks", "shockfree"), ...)
 }
 \arguments{
 \item{x}{An object of class \code{lifeplus}, as returned by \code{\link{lifeplus}()}.}
 
 \item{conf.level}{A scalar in \code{(0, 1)} specifying the credible interval width.
-Defaults to \code{0.95} (i.e., a 95\\% interval).}
+Defaults to \code{0.95} (i.e., a 95\% interval).}
 
 \item{component}{A character string specifying which variable to extract.
-One of \code{"eta"} (default), \code{"shocks"}, or \code{"eta_shockfree"}. The latter two
+One of \code{"life"} (default), \code{"shocks"}, or \code{"shockfree"}. The latter two
 require the presence of a shock model.}
 
 \item{...}{Additional arguments (currently ignored)}
@@ -32,7 +32,7 @@ A \code{\link[tibble]{tibble}} with columns:
 }
 \description{
 Extracts posterior summaries from a fitted \code{lifeplus} model as a tidy tibble,
-following the conventions of the \href{https://broom.tidymodels.org/}{broom} package.
+following the conventions of the \code{broom} package.
 Each row represents one parameter (area x time combination) with its posterior median and
 credible interval.
 }

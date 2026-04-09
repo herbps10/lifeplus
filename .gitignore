@@ -48,3 +48,5 @@ rsconnect/
 inst/doc
 
 bin/
+
+libs/

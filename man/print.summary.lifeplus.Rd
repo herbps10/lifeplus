@@ -19,3 +19,6 @@ Invisibly returns \code{x}.
 \description{
 Print a Lifeplus Model Summary
 }
+\seealso{
+\code{\link{summary.lifeplus}()}
+}

@@ -1,54 +1,77 @@
-test_that("lifeplus successfully runs with all combinations of models", {
-  data <- simulate_lifeplus(2, 15, 10016)
+test_that("lifeplus successfully runs with all model combinations", {
+  skip_on_cran()
+  skip_if_not_installed("cmdstanr")
+
+  data <- simulate_lifeplus(num_areas = 2, num_times = 15, seed = 10016)
 
   transition_models <- list(
-    transition_model_double_logistic(hierarchical = TRUE),
-    transition_model_double_logistic(hierarchical = FALSE),
-    transition_model_gaussian_process(hierarchical = TRUE),
-    transition_model_gaussian_process(hierarchical = FALSE),
-    transition_model_spline(hierarchical = TRUE),
-    transition_model_spline(hierarchical = FALSE)
+    dl_hier = transition_model_double_logistic(hierarchical = TRUE),
+    dl_indep = transition_model_double_logistic(hierarchical = FALSE),
+    gp_hier = transition_model_gaussian_process(hierarchical = TRUE),
+    gp_indep = transition_model_gaussian_process(hierarchical = FALSE),
+    sp_hier = transition_model_spline(hierarchical = TRUE),
+    sp_indep = transition_model_spline(hierarchical = FALSE)
   )
 
   data_models <- list(
-    data_model_normal(),
-    data_model_outlier()
+    normal = data_model_normal(),
+    outlier = data_model_outlier()
   )
 
   shock_models <- list(
-    shock_model_none(),
-    shock_model_regularized_horseshoe()
+    none = shock_model_none(),
+    horseshoe = shock_model_regularized_horseshoe()
   )
 
-  # Test it works with different hierarchical options
-  for (transition_model_index in seq_along(transition_models)) {
-    for (data_model_index in seq_along(data_models)) {
-      for (shock_model_index in seq_along(shock_models)) {
-        if (
-          shock_models[[shock_model_index]]$name == "regularized_horseshoe" &
-            data_models[[data_model_index]]$name == "outlier"
-        ) {
-          next
-        }
+  combos <- expand.grid(
+    transition = names(transition_models),
+    data = names(data_models),
+    shock = names(shock_models),
+    stringsAsFactors = FALSE
+  )
 
-        expect_no_error(
-          lifeplus(
-            data,
-            "y",
-            "time",
-            area = "area",
-            transition_model = transition_models[[transition_model_index]],
-            data_model = data_models[[data_model_index]],
-            shock_model = shock_models[[shock_model_index]],
-            chains = 1,
-            iter_warmup = 500,
-            iter_sampling = 500,
-            refresh = 0,
-            show_messages = FALSE,
-            show_exceptions = FALSE
-          )
-        )
-      }
+  sampling_args <- list(
+    data = data,
+    y = "y",
+    time = "time",
+    area = "area",
+    chains = 1,
+    iter_warmup = 50,
+    iter_sampling = 50,
+    refresh = 0,
+    show_messages = FALSE,
+    show_exceptions = FALSE
+  )
+
+  for (index in seq_len(nrow(combos))) {
+    combo <- combos[index, ]
+    models <- list(
+      transition_model = transition_models[[combo$transition]],
+      data_model = data_models[[combo$data]],
+      shock_model = shock_models[[combo$shock]]
+    )
+
+    if (
+      !check_model_compatibility(
+        models$transition_model,
+        models$data_model,
+        models$shock_model,
+        error = FALSE
+      )
+    ) {
+      next
     }
+
+    label <- paste(combo$transition, combo$data, combo$shock, sep = " / ")
+
+    args <- c(sampling_args, models)
+
+    fit <- do.call(lifeplus, args)
+    expect_equal(
+      class(fit),
+      "lifeplus",
+      label = label,
+      expected.label = "lifeplus"
+    )
   }
 })

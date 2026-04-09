@@ -10,7 +10,8 @@ globalVariables(c(
   "x",
   "y",
   "px",
-  "py"
+  "py",
+  "held_out"
 ))
 
 #' Plot posterior projections
@@ -19,7 +20,8 @@ globalVariables(c(
 #' @param areas vector of areas to plot (default: all areas in fit)
 #' @param start_time first time point to plot (defaults to first data point)
 #' @param end_time final time point to plot (defaults to final projection time point)
-#' @param data logical indicating whether to plot raw data (default: TRUE)
+#' @param shockfree Logical; whether to plot projections with shock terms (default) or with shocks excluded (requires model fitted with shock component)
+#' @param data Logical; whether to plot raw data (default: TRUE)
 #'
 #' @return ggplot2 plot
 #'
@@ -29,18 +31,26 @@ plot_projections <- function(
   areas = fit$areas,
   start_time = min(fit$times),
   end_time = max(fit$times),
+  shockfree = FALSE,
   data = TRUE
 ) {
   checkmate::check_class(fit, "lifeplus")
   checkmate::check_subset(areas, fit$areas)
   checkmate::check_flag(data)
+  checkmate::check_flag(shockfree)
 
-  plot_data <- fit$posteriors$life[
-    fit$posteriors$life$variable == "eta" &
-      fit$posteriors$life$area %in%
-        areas &
-      fit$posteriors$life$time >= start_time &
-      fit$posteriors$life$time <= end_time,
+  post <- fit$posteriors$life
+  if (shockfree == TRUE) {
+    if (fit$shock_model$name == "none") {
+      cli::cli_abort(
+        "Cannot plot shock-free projections because model was fit without a shock model."
+      )
+    }
+    post <- fit$posteriors$shockfree
+  }
+
+  plot_data <- post[
+    post$area %in% areas & post$time >= start_time & post$time <= end_time,
   ]
 
   alpha <- 0.8
@@ -75,12 +85,26 @@ plot_projections <- function(
     ggplot2::labs(x = fit$time, y = fit$y)
 
   if (data == TRUE) {
+    n_held_out <- sum(fit$data[[fit$time]] > fit$cutoff_time)
+    held_out_labels <- c("No", "Yes")
+    if (n_held_out == 0) {
+      held_out_labels = held_out_labels[1]
+    }
     point_data <- data.frame(
       x = fit$data[[fit$time]],
       y = fit$data[[fit$y]],
-      area = fit$data[[fit$area]]
+      area = fit$data[[fit$area]],
+      held_out = factor(
+        fit$data[[fit$time]] > fit$cutoff_time,
+        labels = held_out_labels
+      )
     )
-    p <- p + ggplot2::geom_point(data = point_data, ggplot2::aes(x, y))
+    p <- p +
+      ggplot2::geom_point(
+        data = point_data,
+        ggplot2::aes(x, y, color = held_out)
+      ) +
+      ggplot2::scale_color_brewer(type = "qual", palette = "Set2")
   }
 
   p

@@ -2,6 +2,10 @@
 #' @export
 generics::tidy
 
+#' @importFrom generics glance
+#' @export
+generics::glance
+
 #' Fit a Lifeplus Model
 #'
 #' @description
@@ -32,11 +36,10 @@ generics::tidy
 #'   \code{data_model_*} constructor (default: \code{\link{data_model_normal}()}).
 #' @param shock_model A shock model specification object created by a
 #'   \code{shock_model_*} constructor (default: \code{\link{shock_model_none}()}).
-#' @param held_out A logical vector of length \code{nrow(data)} indicating
-#'   which observations to hold out from model fitting, or \code{NULL} (default)
-#'   to include all observations.
+#' @param cutoff_time A integer specifying the final time point to include in the analysis. All time points after
+#'   \code{cutoff_time} are held-out from the model fit. Setting \code{cutoff_time = NULL} (default) does not hold out any data.
 #' @param posterior_quantiles A numeric vector of probabilities in \code{(0, 1)}
-#'   at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_quantiles}()}, which provides
+#'   at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_posterior_quantiles}()}, which provides
 #'   a fine grid from the 0.1% to 99.9% quantile.
 #' @param ... additional arguments passed to \code{CmdStanModel::sample}.
 #'
@@ -51,6 +54,7 @@ generics::tidy
 #'   \item{\code{elapsed}}{A \code{link{difftime}} object for wall-clock sampling time.}
 #'   \item{\code{posteriors}}{Posterior summaries.}
 #'   \item{\code{diagnose}}{MCMC diagnostic sumary from CmdStan.}
+#'   \item{\code{validation}}{Validation results for held-out observations, including error and whether the posterior intervals cover the true value of the outcome.}
 #'   \item{\code{posterior_quantiles}}{The numeric vector of quantile probabilities used for posterior summaries.}
 #'   \item{\code{transition_model}, \code{data_model}, \code{shock_model}}{Model specifications used for this fit.}
 #' }
@@ -92,7 +96,7 @@ lifeplus <- function(
   transition_model = transition_model_double_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
-  held_out = NULL,
+  cutoff_time = NULL,
   posterior_quantiles = lifeplus_default_posterior_quantiles(),
   ...
 ) {
@@ -104,9 +108,9 @@ lifeplus <- function(
   checkmate::assert_subset(y, colnames(data))
   checkmate::assert_subset(time, colnames(data))
   checkmate::assert_subset(area, colnames(data))
-  checkmate::assert_numeric(start_time, null.ok = TRUE)
-  checkmate::assert_numeric(end_time, null.ok = TRUE)
-  checkmate::assert_logical(held_out, len = nrow(data), null.ok = TRUE)
+  checkmate::assert_number(start_time, null.ok = TRUE)
+  checkmate::assert_number(end_time, null.ok = TRUE)
+  checkmate::assert_number(cutoff_time, null.ok = TRUE)
 
   checkmate::assert_numeric(
     posterior_quantiles,
@@ -133,8 +137,8 @@ lifeplus <- function(
   start_time <- as.integer(start_time)
   end_time <- as.integer(end_time)
 
-  if (is.null(held_out)) {
-    held_out <- rep(FALSE, nrow(data))
+  if (is.null(cutoff_time)) {
+    cutoff_time <- max(data[[time]])
   }
 
   # Make sure the observed data are within the estimation period
@@ -144,18 +148,13 @@ lifeplus <- function(
 
   # Load model
   stan_model <- load_model(transition_model, data_model, shock_model)
+
   # Setup data for Stan
   areas <- unique(data[[area]])
   times <- seq(start_time, end_time, 1)
 
   data$c <- match(data[[area]], areas)
   data$t <- match(data[[time]], times)
-
-  if (length(held_out) == 1 && held_out == FALSE) {
-    held_out = rep(0, nrow(data))
-  } else {
-    held_out = as.numeric(held_out)
-  }
 
   t_last <- max(data$t)
 
@@ -166,11 +165,12 @@ lifeplus <- function(
   obs <- matrix(
     NA,
     nrow = length(areas),
-    ncol = max(data$t[held_out == 0])
+    ncol = length(times[times <= cutoff_time])
   )
+
   for (c in seq_along(areas)) {
-    o <- order(data$t[data$c == c & held_out == 0])
-    obs[c, ] <- data[[y]][data$c == c & held_out == 0][o]
+    o <- order(data$t[data$c == c & data[[time]] <= cutoff_time])
+    obs[c, ] <- data[[y]][data$c == c & data[[time]] <= cutoff_time][o]
   }
 
   stan_data <- list(
@@ -236,7 +236,7 @@ lifeplus <- function(
     y = y,
     time = time,
     area = area,
-    held_out = held_out,
+    cutoff_time = cutoff_time,
 
     transition_model = transition_model,
     data_model = data_model,
@@ -253,6 +253,8 @@ lifeplus <- function(
 
   result$diagnose <- fit$diagnostic_summary()
   result$posterior_quantiles <- posterior_quantiles
+
+  result$validation <- process_validation(result)
 
   attr(result, "class") <- "lifeplus"
 

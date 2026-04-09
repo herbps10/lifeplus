@@ -17,7 +17,8 @@ print.lifeplus <- function(x, ...) {
   ##### Inputs #####
   n_areas <- length(x$areas)
   n_obs <- nrow(x$data)
-  n_held_out <- sum(x$held_out)
+  cutoff_time <- x$cutoff_time
+  n_held_out <- sum(x$data[[x$time]] > cutoff_time)
   start_time <- min(x$times)
   end_time <- max(x$times)
   n_time <- length(x$times)
@@ -25,9 +26,15 @@ print.lifeplus <- function(x, ...) {
   cli::cli_h3("Data")
   cli::cli_ul()
   cli::cli_li("Outcome variable: {.field {x$y}}")
-  cli::cli_li(
-    "Time variable: {.field {x$time}} ({.val {start_time}} to {.val {end_time}})"
-  )
+  if (n_held_out == 0) {
+    cli::cli_li(
+      "Time variable: {.field {x$time}} ({.val {start_time}} to {.val {end_time}})"
+    )
+  } else {
+    cli::cli_li(
+      "Time variable: {.field {x$time}} ({.val {start_time}} to {.val {end_time}}, all data after {.val {cutoff_time}} held out)"
+    )
+  }
   cli::cli_li(
     "Area variable: {.field {x$area}} ({.val {n_areas}} areas)"
   )
