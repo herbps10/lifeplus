@@ -35,12 +35,12 @@ plot_projections <- function(
   checkmate::check_subset(areas, fit$areas)
   checkmate::check_flag(data)
 
-  plot_data <- fit$posteriors$temporal[
-    fit$posteriors$temporal$variable == "eta" &
-      fit$posteriors$temporal$area %in%
+  plot_data <- fit$posteriors$life[
+    fit$posteriors$life$variable == "eta" &
+      fit$posteriors$life$area %in%
         areas &
-      fit$posteriors$temporal$time >= start_time &
-      fit$posteriors$temporal$time <= end_time,
+      fit$posteriors$life$time >= start_time &
+      fit$posteriors$life$time <= end_time,
   ]
 
   alpha <- 0.8
@@ -105,41 +105,26 @@ plot_shocks <- function(
   checkmate::check_class(fit, "lifeplus")
   checkmate::check_subset(areas, fit$areas)
 
-  plot_data <- fit$posteriors$temporal[
-    fit$posteriors$temporal$variable == "shock2" &
-      fit$posteriors$temporal$area %in%
+  plot_data <- fit$posteriors$shocks[
+    fit$posteriors$shocks$variable == "shock2" &
+      fit$posteriors$shocks$area %in%
         areas &
-      fit$posteriors$temporal$time >= start_time &
-      fit$posteriors$temporal$time <= end_time,
+      fit$posteriors$shocks$time >= start_time &
+      fit$posteriors$shocks$time <= end_time,
   ]
 
   alpha <- 0.8
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = time, y = `50%`)) +
-    ggplot2::geom_ribbon(
+    ggplot2::geom_errorbar(
       ggplot2::aes(
         ymin = `2.5%`,
         ymax = `97.5%`,
         fill = "95%"
       ),
-      alpha = alpha
+      alpha = alpha,
+      width = 0
     ) +
-    ggplot2::geom_ribbon(
-      ggplot2::aes(
-        ymin = `10%`,
-        ymax = `90%`,
-        fill = "80%"
-      ),
-      alpha = alpha
-    ) +
-    ggplot2::geom_ribbon(
-      ggplot2::aes(
-        ymin = `25%`,
-        ymax = `75%`,
-        fill = "50%"
-      ),
-      alpha = alpha
-    ) +
-    ggplot2::geom_line(size = 0.5) +
+    ggplot2::geom_point(size = 0.5) +
     ggplot2::scale_fill_brewer(direction = -1) +
     ggplot2::facet_wrap(~area)
 

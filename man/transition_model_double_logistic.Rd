@@ -2,16 +2,55 @@
 % Please edit documentation in R/transition_models.R
 \name{transition_model_double_logistic}
 \alias{transition_model_double_logistic}
-\title{Double logistic transition model}
+\title{Double Logistic Transition Model}
 \usage{
 transition_model_double_logistic(hierarchical = TRUE)
 }
 \arguments{
-\item{hierarchical}{whether to estimate double logistic parameters hierarchically (default: TRUE)}
+\item{hierarchical}{Logical; whether to estimate the double logistic parameters
+hierarchically across areas (default: \code{TRUE}). Setting this to \code{TRUE}
+enables partial pooling, which can improve estimation for areas with sparse data.}
 }
 \value{
-Object of class lifeplus_transition_model
+An object of class \code{lifeplus_transition_model}, a named list containing:
+\describe{
+\item{\code{name}}{Character string \code{"double_logistic"}.}
+\item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
+\item{\code{param_names}}{Character vector of parameter names for labelling posterior summaries.}
+\item{\code{stan_data}}{A named list of data passed to the Stan model.}
+\item{\code{extract_params}}{A function for extracting transition parameters from a fitted model
+(used internally)}
+\item{\code{print_info}}{A function for printing the transition model.}
+}
 }
 \description{
-Double logistic transition model
+Specifies a double logistic transition model for use in \code{\link{lifeplus}()}.
+The double logistic function models the relationship between age and the rate of
+change of mortality with six parameters.
+}
+\details{
+The six parameters of the double logistic function are:
+\describe{
+\item{\code{Delta1}}{Shape parameter constrained in \code{(0, 50)}.}
+\item{\code{Delta2}}{Shape parameters constrained in \code{(0, 50)}.}
+\item{\code{Delta3}}{Shape parameters constrained in \code{(0, 50)}.}
+\item{\code{Delta4}}{Shape parameters constrained in \code{(5, 50)}.}
+\item{\code{k}}{Shape parameter constrained to \code{(0, 10)}.}
+\item{\code{z}}{Asymptotic growth rate parameter constrained to \code{(0, 1.15/5)}.}
+}
+
+When \code{hierarchical = TRUE} (the default), the parameters are modeled with
+a multivariate normal hierarchical prior across areas, allowing partial pooling.
+When \code{FALSE}, each area's parameters are estimated independently.
+}
+\examples{
+# Default: hierarchical estimation
+transition_model_double_logistic()
+
+# Independent estimation per area
+transition_model_double_logistic(hierarchical = FALSE)
+
+}
+\seealso{
+\code{\link{lifeplus}()} for model fitting.
 }

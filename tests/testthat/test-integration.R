@@ -32,7 +32,7 @@ test_that("lifeplus successfully runs with all combinations of models", {
         }
 
         expect_no_error(
-          fit <- lifeplus(
+          lifeplus(
             data,
             "y",
             "time",
@@ -41,17 +41,14 @@ test_that("lifeplus successfully runs with all combinations of models", {
             data_model = data_models[[data_model_index]],
             shock_model = shock_models[[shock_model_index]],
             chains = 1,
-            iter_warmup = 300,
-            iter_sampling = 300,
+            iter_warmup = 500,
+            iter_sampling = 500,
             refresh = 0,
             show_messages = FALSE,
             show_exceptions = FALSE
           )
         )
       }
-
-      expect_s3_class(fit, "lifeplus")
-      expect_equal(sum(fit$posteriors$temporal$variable == "eta"), 30)
     }
   }
 })

@@ -2,20 +2,29 @@
 % Please edit documentation in R/transition_models.R
 \name{transition_model_spline}
 \alias{transition_model_spline}
-\title{Spline transition model}
+\title{Spline Transition Model}
 \usage{
 transition_model_spline(hierarchical = TRUE, degree = 2, knots = 7)
 }
 \arguments{
-\item{hierarchical}{Whether to apply hierarchical models to spline coefficients}
+\item{hierarchical}{Whether to estimate hierarchical Gaussian Process}
 
-\item{degree}{Spline degree}
+\item{degree}{Degree of B-spline basis functions}
 
-\item{knots}{Number of spline knots}
+\item{knots}{Number of B-spline knots (evenly spaced)}
 }
 \value{
-lifeplus_transition_model
+An object of class \code{lifeplus_transition_model} containing:
+\describe{
+\item{\code{name}}{Character string \code{"gaussian_process"}}
+\item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
+\item{\code{degree}}{Integer; degree of B-spline basis functions.}
+\item{\code{knots}}{Integer; number of B-spline knots}
+\item{\code{stan_data}}{A function used internally to form the data passed to Stan for the spline model}
+\item{\code{extract_params}}{A function for extracting spline parameters from a fitted model (used internally).}
+\item{\code{print_info}}{A function for printing the transition model.}
+}
 }
 \description{
-Spline transition model
+Spline Transition Model
 }

@@ -15,7 +15,7 @@ data_model_normal(prior_mean = 0, prior_sd = 1)
 lifeplus_data_model
 }
 \description{
-Normal data model
+White noise data model that assumes the residuals follow independent mean-zero normal distributions.
 }
 \details{
 The residuals are modeled as \eqn{\epsilon_{c,t} \sim N(0, \sigma^2)}.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/transition_models.R
 \name{transition_model_gaussian_process}
 \alias{transition_model_gaussian_process}
-\title{Approximate Gaussian Process transition model}
+\title{Approximate Gaussian Process Transition Model}
 \usage{
 transition_model_gaussian_process(
   hierarchical = TRUE,
@@ -18,15 +18,51 @@ transition_model_gaussian_process(
 \item{boundary_factor}{Approximation boundary factor tuning parameter}
 }
 \value{
-lifeplus_transition_model
+An object of class \code{lifeplus_transition_model} containing:
+\describe{
+\item{\code{name}}{Character string \code{"gaussian_process"}}
+\item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
+\item{\code{basis_functions}}{Integer; number of basis functions used.}
+\item{\code{boundary_factor}}{Numeric; boundary expansion factor used.}
+\item{\code{stan_data}}{A named list of data passed to the Stan model.}
+\item{\code{extract_params}}{A function for extracting GP parameters from a fitted model (used internally).}
+\item{\code{print_info}}{A function for printing the transition model.}
+}
 }
 \description{
-Approximate Gaussian Process transition model
+Specifies an approximate Gaussian Process (GP) transition model for use in
+\code{\link{lifeplus}()}. The transition function relating age to
+the rate of change of mortality is given a GP prior, providing a flexible nonparametric
+alternative to parameteric transition models (e.g., \code{\link{transition_model_double_logistic}()}).
 }
 \details{
-The transition function is modeled by a Gaussian Process prior.
-For computational reasons, the Gaussian Process is approximated with a basis function approach
-(see Riutort-Mayol et al. 2020).
+For computational efficiency, the GP is approximated using a Hilbert space
+basis function expansion (Riutort-Mayol et al. 2023). The two tuning parameters
+control the fidelity of this approximation:
+\describe{
+\item{\code{basis_functions}}{The number of basis fucntions \eqn{M}.
+Higher values give a better approximation of the true GP but increase
+the number of parameters. Values in the range 15-30 generally suffice.}
+\item{\code{boundary_factor}}{A multiplier \eqn{L} that defines the boundary
+of the approximation domain as \eqn{L} times the range of the input (age) grid.
+Values in the range 1.2-2.0 are typical.}
+}
 
-References: Riutort-Mayol, G., Bürkner, PC., Andersen, M.R. et al. (2020) Practical Hilbert space approximate Bayesian Gaussian processes for probabilistic programming. Stat Comput 33, 17
+When \code{hierarchical = TRUE} (default), the GP basis weights are modeled hierarchically
+across areas, enabling partial pooling. When \code{FALSE}, basis weights are estimated independently
+across areas.
+}
+\examples{
+# Default settings
+transition_model_gaussian_process()
+
+}
+\references{
+Riutort-Mayol, G., Bürkner, PC., Andersen, M.R., Solin. A, and Vehtari A. (2023)
+Practical Hilbert space approximate Bayesian Gaussian processes for probabilistic programming.
+\emph{Statistics and Computing} 33, 17. \doi{10.1007/s11222-022-10167-2}
+}
+\seealso{
+\code{\link{lifeplus}()} for model fitting.
+\code{\link{transition_model_double_logistic}()} for a parametric alternative.
 }

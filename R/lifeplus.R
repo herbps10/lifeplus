@@ -1,4 +1,6 @@
-library(splines)
+#' @importFrom generics tidy
+#' @export
+generics::tidy
 
 #' Fit a Lifeplus Model
 #'
@@ -33,6 +35,9 @@ library(splines)
 #' @param held_out A logical vector of length \code{nrow(data)} indicating
 #'   which observations to hold out from model fitting, or \code{NULL} (default)
 #'   to include all observations.
+#' @param posterior_quantiles A numeric vector of probabilities in \code{(0, 1)}
+#'   at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_quantiles}()}, which provides
+#'   a fine grid from the 0.1% to 99.9% quantile.
 #' @param ... additional arguments passed to \code{CmdStanModel::sample}.
 #'
 #' @return An object of class \code{lifeplus}, which is a named list containing:
@@ -46,6 +51,7 @@ library(splines)
 #'   \item{\code{elapsed}}{A \code{link{difftime}} object for wall-clock sampling time.}
 #'   \item{\code{posteriors}}{Posterior summaries.}
 #'   \item{\code{diagnose}}{MCMC diagnostic sumary from CmdStan.}
+#'   \item{\code{posterior_quantiles}}{The numeric vector of quantile probabilities used for posterior summaries.}
 #'   \item{\code{transition_model}, \code{data_model}, \code{shock_model}}{Model specifications used for this fit.}
 #' }
 #'
@@ -87,6 +93,7 @@ lifeplus <- function(
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
   held_out = NULL,
+  posterior_quantiles = lifeplus_default_posterior_quantiles(),
   ...
 ) {
   ###### Initial argument checks
@@ -97,9 +104,19 @@ lifeplus <- function(
   checkmate::assert_subset(y, colnames(data))
   checkmate::assert_subset(time, colnames(data))
   checkmate::assert_subset(area, colnames(data))
-  checkmate::assert_integer(start_time, null.ok = TRUE)
-  checkmate::assert_integer(end_time, null.ok = TRUE)
+  checkmate::assert_numeric(start_time, null.ok = TRUE)
+  checkmate::assert_numeric(end_time, null.ok = TRUE)
   checkmate::assert_logical(held_out, len = nrow(data), null.ok = TRUE)
+
+  checkmate::assert_numeric(
+    posterior_quantiles,
+    lower = 0,
+    upper = 1,
+    any.missing = FALSE,
+    min.len = 1,
+    sorted = TRUE,
+    .var.name = "posterior_quantiles"
+  )
 
   args <- list(...)
 
@@ -113,13 +130,15 @@ lifeplus <- function(
   if (is.null(end_time)) {
     end_time <- max(data[[time]])
   }
+  start_time <- as.integer(start_time)
+  end_time <- as.integer(end_time)
 
   if (is.null(held_out)) {
     held_out <- rep(FALSE, nrow(data))
   }
 
   # Make sure the observed data are within the estimation period
-  checkmate::assert_integer(data[[time]], lower = start_time, upper = end_time)
+  checkmate::assert_numeric(data[[time]], lower = start_time, upper = end_time)
 
   check_model_compatibility(transition_model, data_model, shock_model)
 
@@ -228,96 +247,14 @@ lifeplus <- function(
 
   result$posteriors <- lifeplus_posteriors(
     result,
-    ifelse(is.null(args$parallel_chains), 1, args$parallel_chains)
+    ifelse(is.null(args$parallel_chains), 1, args$parallel_chains),
+    posterior_quantiles = posterior_quantiles
   )
 
   result$diagnose <- fit$diagnostic_summary()
+  result$posterior_quantiles <- posterior_quantiles
 
   attr(result, "class") <- "lifeplus"
 
   result
-}
-
-#' Print a Lifeplus Model Fit
-#'
-#' @description
-#' Displays a concise summary of a fitted \code{lifeplus} model.
-#'
-#' @param x An object of class \code{lifeplus}, as returned by \code{\link{lifeplus}()}.
-#' @param ... Additional arguments passed to other methods (currently ignored).
-#'
-#' @return Invisibly returns \code{x}.
-#'
-#' @seealso \code{\link{lifeplus}()}
-#'
-#' @export
-print.lifeplus <- function(x, ...) {
-  cli::cli_rule(left = "{.strong lifeplus} model fit")
-
-  ##### Inputs #####
-  n_areas <- length(x$areas)
-  n_obs <- nrow(x$data)
-  n_held_out <- sum(x$held_out)
-  start_time <- min(x$times)
-  end_time <- max(x$times)
-  n_time <- length(x$times)
-
-  cli::cli_h3("Data")
-  cli::cli_ul()
-  cli::cli_li("Outcome variable: {.field {x$y}}")
-  cli::cli_li(
-    "Time variable: {.field {x$time}} ({.val {start_time}} to {.val {end_time}})"
-  )
-  cli::cli_li(
-    "Area variable: {.field {x$area}} ({.val {n_areas}} areas)"
-  )
-  cli::cli_li("Observations: {.val {n_obs}} ({.val {n_held_out}} held out)")
-  cli::cli_end()
-
-  ##### Model components ######
-  cli::cli_h3("Model components")
-  cli::cli_ul()
-  cli::cli_li("Transition: {.emph {x$transition_model$name}}")
-  cli::cli_li("Data: {.emph {x$data_model$name}}")
-  cli::cli_li("Shock: {.emph {x$shock_model$name}}")
-  cli::cli_end()
-
-  ##### Sampling #####
-  cli::cli_h3("Sampling")
-  n_chains <- length(x$samples$metadata()$id)
-  n_iter <- x$samples$metadata()$iter_sampling
-  n_warmup <- x$samples$metadata()$iter_warmup
-
-  cli::cli_ul()
-  cli::cli_li("Chains: {.val {n_chains}}")
-  cli::cli_li("Iterations: {.val {n_warmup}} warmup + {.val {n_iter}} sampling")
-  cli::cli_li("Elapsed: {format(x$elapsed, digits = 3)}")
-  cli::cli_end()
-
-  ##### Diagnostics #####
-  diag <- x$diagnose
-  n_divergent <- sum(diag$num_divergent)
-  n_max_treedepth <- sum(diag$num_max_treedepth)
-  any_low_ebfmi <- any(diag$ebfmi < 0.3)
-
-  cli::cli_h3("Diagnostics")
-  if (n_divergent > 0) {
-    cli::cli_alert_danger("{.val {n_divergent}} divergent transition{?s}")
-  } else {
-    cli::cli_alert_success("No divergent transitions")
-  }
-  if (n_max_treedepth > 0) {
-    cli::cli_alert_danger(
-      "{.val {n_max_treedepth}} transition{?s} hit max treedepth"
-    )
-  } else {
-    cli::cli_alert_success("No max treedepth warnings")
-  }
-  if (any_low_ebfmi) {
-    cli::cli_alert_danger("Low E-BFMI detected (< 0.3)")
-  } else {
-    cli::cli_alert_success("No E-BFMI warnings")
-  }
-
-  invisible(x)
 }

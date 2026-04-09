@@ -2,7 +2,7 @@
 % Please edit documentation in R/lifeplus.R
 \name{lifeplus}
 \alias{lifeplus}
-\title{Fit Lifeplus model}
+\title{Fit a Lifeplus Model}
 \usage{
 lifeplus(
   data,
@@ -14,33 +14,99 @@ lifeplus(
   transition_model = transition_model_double_logistic(),
   data_model = data_model_normal(),
   shock_model = shock_model_none(),
-  held_out = FALSE,
+  held_out = NULL,
+  posterior_quantiles = lifeplus_default_posterior_quantiles(),
   ...
 )
 }
 \arguments{
-\item{data}{a data frame.}
+\item{data}{a data frame containing at least the columns specified by \code{y}, \code{time}, and \code{area}.}
 
-\item{y}{column name of outcome variable..}
+\item{y}{A string giving the name of the numeric outcome column in \code{data} (typically life expectancy in years).}
 
-\item{time}{column name of time variable.}
+\item{time}{A string giving the name of the integer-valued time column in \code{data} (e.g., calendar year).}
 
-\item{area}{column name of the area of each observation}
+\item{area}{A string giving the name of the column in \code{data} that identifies the geographic or administrative unit for each observation.}
 
-\item{start_time}{start time of estimates.}
+\item{start_time}{An integer specifying the first time point of the estimation window, or \code{NULL} (default)
+to use \code{min(data[[time]])}.}
 
-\item{end_time}{end time of estimates.}
+\item{end_time}{An integer specifying the last time point of the projection window, or \code{NULL} (default)
+to use \code{max(data[[time]])}.}
 
-\item{transition_model}{transition model specification (default: \code{transition_model_logistic()})}
+\item{transition_model}{A transition model specification object created by a
+\code{transition_model_*} constructor (default: \code{\link{transition_model_double_logistic}()}).}
 
-\item{data_model}{data model specification (default: \code{data_model_normal()})}
+\item{data_model}{A data model specification object created by a
+\code{data_model_*} constructor (default: \code{\link{data_model_normal}()}).}
 
-\item{shock_model}{shock term specification (default: \code{shock_model_none()})}
+\item{shock_model}{A shock model specification object created by a
+\code{shock_model_*} constructor (default: \code{\link{shock_model_none}()}).}
 
-\item{held_out}{binary vector indicating which observations are held out. Set to FALSE to hold out no observations.}
+\item{held_out}{A logical vector of length \code{nrow(data)} indicating
+which observations to hold out from model fitting, or \code{NULL} (default)
+to include all observations.}
 
-\item{...}{additional arguments passed to CmdStanModel::sample.}
+\item{posterior_quantiles}{A numeric vector of probabilities in \code{(0, 1)}
+at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_quantiles}()}, which provides
+a fine grid from the 0.1\% to 99.9\% quantile.}
+
+\item{...}{additional arguments passed to \code{CmdStanModel::sample}.}
+}
+\value{
+An object of class \code{lifeplus}, which is a named list containing:
+\describe{
+\item{\code{samples}}{A \code{\link[cmdstanr]{CmdStanMCMC}} fit object.}
+\item{\code{data}}{The original input data frame.}
+\item{\code{stan_data}}{The named list passed to Stan.}
+\item{\code{times}}{Integer vector of time-points in the estimation and projection window (\code{start_time:end_time})}
+\item{\code{areas}}{Vector of unique area identifiers.}
+\item{\code{grid}}{Grid of transition function inputs.}
+\item{\code{elapsed}}{A \code{link{difftime}} object for wall-clock sampling time.}
+\item{\code{posteriors}}{Posterior summaries.}
+\item{\code{diagnose}}{MCMC diagnostic sumary from CmdStan.}
+\item{\code{posterior_quantiles}}{The numeric vector of quantile probabilities used for posterior summaries.}
+\item{\code{transition_model}, \code{data_model}, \code{shock_model}}{Model specifications used for this fit.}
+}
 }
 \description{
-Fit Lifeplus model
+Fits a Bayesian hierarchical model to life expectancy data using
+CmdStan. The model is composed of three components: a transition model,
+data model, and shock model, each of which may be configured independently.
+}
+\details{
+The function constructs a model from the chosen specifications, prepares
+the data, runs MCMC sampling via \code{\link[cmdstanr]{CmdStanModel}}, and returns
+an object of class \code{lifeplus} containing posterior draws, diagnostics, and
+metadata.
+
+All areas are assumed to have observations at every time point in the (non-held-out)
+data.
+}
+\examples{
+\dontrun{
+example_life_data <- simulate_lifeplus(num_areas = 1, num_times = 40)
+
+fit <- lifeplus(
+  data = example_life_data,
+  y = "y",
+  time = "time",
+  area = "area",
+  transition_model = transition_model_double_logistic(hierarchical = FALSE),
+  data_model = data_model_normal(),
+  chains = 4,
+  parallel_chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000
+)
+}
+
+}
+\seealso{
+Transition models: \code{\link{transition_model_double_logistic}()},
+\code{\link{transition_model_spline}()}, \code{\link{transition_model_gaussian_process}()},
+
+Data models: \code{\link{data_model_normal}()}, \code{\link{data_model_outlier}()}
+
+Shock models: \code{\link{shock_model_none}()}, \code{\link{shock_model_regularized_horseshoe}()}
 }

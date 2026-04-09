@@ -63,10 +63,10 @@ data(UNlocations, package = "wpp2024")
 data(e0M1, package = "wpp2024")
 ```
 
-First, let's find the country codes for the countries we are interested in. To start, we will fit the model to a single country: Somalia.
+First, let's find the country codes for the countries we are interested in. To start, we will fit the model to a single country: Colombia
 ```{r}
 country_codes <- UNlocations |>
-  dplyr::filter(name == "Somalia") |>
+  dplyr::filter(name == "Colombia") |>
   dplyr::pull(country_code)
 ```
 
@@ -81,7 +81,7 @@ data <- e0M1 |>
 ```{r}
 ggplot(data, aes(x = year, y = e0)) +
   geom_point() +
-  labs(x = "Year", y = "Male life expectancy at birth (e0)", title = "Somalia")
+  labs(x = "Year", y = "Male life expectancy at birth (e0)", title = "Colombia")
 ```
 
 ### Modeling with `lifeplus`
@@ -97,8 +97,8 @@ fit <- lifeplus(
   transition_model = transition_model_double_logistic(hierarchical = FALSE),
   data_model = data_model_normal(), 
   shock = shock_model_none(),
-  iter_warmup = 500,
-  iter_sampling = 500,
+  iter_warmup = 1e3,
+  iter_sampling = 1e3,
   refresh = 0,
   show_messages = FALSE,
   show_exceptions = FALSE,
@@ -106,7 +106,17 @@ fit <- lifeplus(
 )
 ```
 
-The `plot_projections` function plots the posterior model projections:
+The default `print` function gives some basic information about the fit:
+```{r}
+print(fit)
+```
+
+We can also look at posterior summaries using `summary`. Let's use it to take a look at the posterior projections through 2030:
+```{r}
+print.summary.lifeplus(summary.lifeplus(fit, times = 2024:2030))
+```
+
+The `plot_projections` function plots the posterior model projections.
 ```{r model_one_projections}
 plot_projections(fit, data = FALSE)
 ```
@@ -124,7 +134,7 @@ fit_shocks <- lifeplus(
   time = "year", 
   area = "name", 
   end_time = 2050, 
-  transition_model = transition_model_double_logistic(hierarchical = FALSE),
+  transition_model = transition_model_double_logistic(hierarchical = TRUE),
   data_model = data_model_normal(), 
   shock = shock_model_regularized_horseshoe(scale_global = 0.1),
   iter_warmup = 500,
@@ -144,6 +154,10 @@ plot_projections(fit_shocks, data = FALSE)
 We can also plot the estimated shock terms from this model:
 ```{r model_two_shocks}
 plot_shocks(fit_shocks)
+```
+
+```{r}
+print.summary.lifeplus(summary.lifeplus(fit_shocks, "shocks"))
 ```
 
 ## References

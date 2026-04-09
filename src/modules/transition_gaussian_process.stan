@@ -8,15 +8,15 @@ functions {
   }
 }
 parameters {
-  real<lower=0> rho;
-  real<lower=0> alpha;
+  real<lower=0> gp_lengthscale;
+  real<lower=0> gp_sigma;
 }
 transformed parameters {
   row_vector[M] diagSPD;
   matrix[C, M] SPD_beta;
 
   for(m in 1:M) {
-    diagSPD[m] = sqrt(spd(alpha, rho, sqrt(flambda(L, m))));
+    diagSPD[m] = sqrt(spd(gp_sigma, gp_lengthscale, sqrt(flambda(L, m))));
   }
 
   for(c in 1:C) {
@@ -35,8 +35,8 @@ transformed parameters {
   }
 }
 model {
-  alpha ~ std_normal();
-  rho ~ inv_gamma(5, 5);
+  gp_sigma ~ std_normal();
+  gp_lengthscale ~ inv_gamma(5, 5);
 }
 generated quantities {
   // With shocks

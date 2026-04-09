@@ -1,26 +1,57 @@
 #' Normal data model
 #'
-#' @param prior_mean Prior mean for white noise standard deviation
-#' @param prior_sd Prior standard deviation for white noise standard deviation
+#' @description
+#' White noise data model that assumes the residuals follow independent mean-zero normal distributions.
+#'
 #' @details
 #' The residuals are modeled as \eqn{\epsilon_{c,t} \sim N(0, \sigma^2)}.
 #' The prior for the residual scale parameter is \eqn{\sigma \sim N(m, s^2)},
 #' where \eqn{m} and \eqn{s} are user-specified via the \code{prior_mean} and \code{prior_sd} arguments, respectively.
+#' @param prior_mean Prior mean for white noise standard deviation
+#' @param prior_sd Prior standard deviation for white noise standard deviation
 #'
 #' @return lifeplus_data_model
 #' @export
 data_model_normal <- function(prior_mean = 0, prior_sd = 1) {
-  x <- list(
-    name = "normal",
-    stan_data = list(
-      epsilon_sigma_prior_mu = prior_mean,
-      epsilon_sigma_prior_sd = prior_sd
-    )
+  structure(
+    list(
+      name = "normal",
+      prior_mean = prior_mean,
+      prior_sd = prior_sd,
+      stan_data = list(
+        epsilon_sigma_prior_mu = prior_mean,
+        epsilon_sigma_prior_sd = prior_sd
+      ),
+      print_info = normal_print_info,
+      extract_params = normal_extract_params
+    ),
+    class = "lifeplus_data_model"
   )
-  class(x) <- "lifeplus_data_model"
-  x
 }
 
+#' Extract posterior summaries for normal data model parameters
+#' @noRd
+#' @keywords internal
+normal_extract_params <- function(fit, n_cores, posterior_quantiles) {
+  vars <- c("epsilon_sigma")
+  post <- summarise_draws(fit, vars, n_cores, posterior_quantiles)
+
+  list(params = post)
+}
+
+#' Print details for the normal data model
+#'
+#' @param x A \code{lifeplus_data_model} object with \code{name = "data_model"}.
+#'
+#' @noRd
+#' @keywords internal
+normal_print_info <- function(x) {
+  cli::cli_h3("Settings")
+  cli::cli_ul()
+  cli::cli_li("Prior mean: {.val {x$prior_mean}}")
+  cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
+  cli::cli_end()
+}
 
 #' Outlier data model
 #'
@@ -40,62 +71,69 @@ data_model_outlier <- function(
   prior_mean = 0,
   prior_sd = 1
 ) {
-  x <- list(
-    name = "outlier",
-    stan_data = list(
+  structure(
+    list(
+      name = "outlier",
       outlier_threshold = outlier_threshold,
-      epsilon_sigma_prior_mu = prior_mean,
-      epsilon_sigma_prior_sd = prior_sd
-    )
+      prior_mean = prior_mean,
+      prior_sd = prior_sd,
+      stan_data = list(
+        outlier_threshold = outlier_threshold,
+        epsilon_sigma_prior_mu = prior_mean,
+        epsilon_sigma_prior_sd = prior_sd
+      ),
+      print_info = outlier_print_info,
+      extract_params = outlier_extract_params
+    ),
+    class = "lifeplus_data_model"
   )
-  class(x) <- "lifeplus_data_model"
-  x
 }
 
-#' Regularized horseshoe prior model for shocks
-#' @param scale_global Global scale parameter
-#' @param slab_scale Slab scale parameter
-#' @param slab_df Slab degrees of freedom parameter
-#' @param constrain_negative Whether to constrain shocks to be negative (default: FALSE)
-#' @details
-#' The regularized horseshoe prior aggressively shrinks the shock term to zero.
-#'
-#'
-#'
-#' Reference: Juho Piironen, Aki Vehtari "Sparsity information and regularization in the horseshoe and other shrinkage priors,"
-#' Electronic Journal of Statistics, Electron. J. Statist. 11(2), 5018-5051, (2017)
-#' @export
-shock_model_regularized_horseshoe <- function(
-  scale_global = 0.1,
-  slab_scale = 10,
-  slab_df = 6,
-  constrain_negative = FALSE
-) {
-  checkmate::assert_numeric(scale_global, lower = 0)
-  checkmate::assert_numeric(slab_scale, lower = 0)
-  checkmate::assert_numeric(slab_df, lower = 0)
-  checkmate::assert_flag(constrain_negative)
+#' Extract posterior summaries for outlier data model parameters
+#' @noRd
+#' @keywords internal
+outlier_extract_params <- function(fit, n_cores, posterior_quantiles) {
+  vars <- c("epsilon_sigma")
+  post <- summarise_draws(fit, vars, n_cores, posterior_quantiles)
 
-  x <- list(
-    name = "regularized_horseshoe",
-    stan_data = list(
-      scale_global = scale_global,
-      slab_scale = slab_scale,
-      slab_df = slab_df,
-      constrain_negative = as.numeric(constrain_negative)
-    )
-  )
-  class(x) <- "lifeplus_shock_model"
-  x
+  list(params = post)
 }
 
-#' Fix all shock terms to zero.
+#' Print details for the outlier data model
+#'
+#' @param x A \code{lifeplus_data_model} object with \code{name = "data_model"}.
+#'
+#' @noRd
+#' @keywords internal
+outlier_print_info <- function(x) {
+  cli::cli_h3("Settings")
+  cli::cli_ul()
+  cli::cli_li("Outlier threshold: {.val {x$outlier_threshold}}")
+  cli::cli_li("Prior mean: {.val {x$prior_mean}}")
+  cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
+  cli::cli_end()
+}
+
+
+#' Print a Lifeplus Data Model Specification
+#'
+#' @description
+#' Displays a human-readable summary of a data model specification.
+#'
+#' @param x An object of class \code{lifeplus_data_model}.
+#' @param ... Additional arguments (currently ignored).
+#'
+#' @return Invisibly returns \code{x}
 #'
 #' @export
-shock_model_none <- function() {
-  x <- list(
-    name = "none"
-  )
-  class(x) <- "lifeplus_shock_model"
-  x
+print.lifeplus_data_model <- function(x, ...) {
+  cli::cli_rule(left = "{.strong lifeplus} data model")
+  cli::cli_text("Type: {.emph {x$name}}")
+
+  if (!is.null(x$print_info)) {
+    x$print_info(x)
+  }
+
+  cli::cli_rule()
+  invisible(x)
 }
