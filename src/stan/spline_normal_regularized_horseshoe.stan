@@ -1,4 +1,8 @@
 functions {
+  real error_rng(vector x, vector epsilon_params, int shock) {
+    return normal_rng(0, epsilon_params[1]);
+  }
+  
   real normal_lub_rng(real mu, real sigma, real lb, real ub) {
     real p_lb = normal_cdf(lb | mu, sigma);
     real p_ub = normal_cdf(ub | mu, sigma);
@@ -24,10 +28,6 @@ functions {
                                                      * square(
                                                               local_shrinkage_pred)));
     return shock_raw_pred * truncated_local_shrinkage_pred * tau;
-  }
-  
-  real error_rng(vector x, vector epsilon_params, int shock) {
-    return normal_rng(0, epsilon_params[1]);
   }
   
   real deboor(real x, vector ext_knots, row_vector a, int degree) {
@@ -80,14 +80,16 @@ data {
   int<lower=0, upper=1> hierarchical;
   int<lower=0, upper=1> shock_diff_mode;
   
+  int<lower=0, upper=1> fix_epsilon_sigma;
+  real<lower=0> epsilon_sigma_fixed;
+  real<lower=0> epsilon_sigma_prior_mu;
+  real<lower=0> epsilon_sigma_prior_sd;
+  
   real<lower=0> scale_global;
   real<lower=0> slab_scale;
   real<lower=0> slab_df;
   real<lower=0> nu_local;
   int<lower=0, upper=1> constrain_negative;
-  
-  real<lower=0> epsilon_sigma_prior_mu;
-  real<lower=0> epsilon_sigma_prior_sd;
   
   int num_basis;
   
@@ -136,12 +138,12 @@ transformed data {
   real P_tilde2 = 110;
 }
 parameters {
+  array[1 - fix_epsilon_sigma] real<lower=0> epsilon_sigma_raw;
+  
   vector<upper=(constrain_negative == 1 ? 0 : positive_infinity())>[C
                                                                     * T_shocks] shock_raw;
   vector<lower=0>[C * T_shocks] lambda;
   real<lower=0> caux;
-  
-  real<lower=0> epsilon_sigma;
   
   matrix[C, num_basis] raw_alpha;
   array[hierarchical] vector[num_basis] mu_alpha;
@@ -158,6 +160,13 @@ transformed parameters {
     first_transition[1] = rep_vector(0, C);
     intermediate_transition[1] = rep_vector(0, C);
     final_transition[1] = rep_vector(0, C);
+  }
+  
+  real epsilon_sigma;
+  if (fix_epsilon_sigma == 1) {
+    epsilon_sigma = epsilon_sigma_fixed;
+  } else {
+    epsilon_sigma = epsilon_sigma_raw[1];
   }
   
   real<lower=0> c_slab = slab_scale * sqrt(caux);
@@ -219,10 +228,6 @@ model {
     to_vector(final_transition[1]) ~ normal(1.15 / 10, 0.5);
   }
   
-  shock_raw ~ std_normal();
-  caux ~ inv_gamma(0.5 * slab_df, 0.5 * slab_df);
-  lambda ~ student_t(nu_local, 0, 1);
-  
   epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
   if (shock_diff_mode == 1) {
     diff ~ normal(
@@ -233,6 +238,10 @@ model {
   } else {
     diff ~ normal(to_vector(transition_function + shock), epsilon_sigma);
   }
+  
+  shock_raw ~ std_normal();
+  caux ~ inv_gamma(0.5 * slab_df, 0.5 * slab_df);
+  lambda ~ student_t(nu_local, 0, 1);
   
   if (hierarchical) {
     to_vector(raw_alpha) ~ std_normal();
@@ -271,6 +280,9 @@ generated quantities {
   matrix[C, num_grid] transition_function_pred;
   vector[num_grid * hierarchical] transition_function_pred_mean;
   
+  vector[1] epsilon_params;
+  epsilon_params[1] = epsilon_sigma;
+  
   real lambda_tilde_sd = sd(lambda_tilde);
   
   for (t in T : (T_shocks + Tpred - T)) {
@@ -278,9 +290,6 @@ generated quantities {
       shock2[c, t] = shock_rng(nu_local, c_slab, tau, constrain_negative);
     }
   }
-  
-  vector[1] epsilon_params;
-  epsilon_params[1] = epsilon_sigma;
   
   for (t in (T + 1) : Tpred) {
     for (c in 1 : C) {

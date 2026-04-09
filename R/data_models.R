@@ -10,16 +10,21 @@
 #'
 #' @param prior_mean Prior mean for white noise standard deviation
 #' @param prior_sd Prior standard deviation for white noise standard deviation
+#' @param fixed_sd if \code{NULL} (default), then residual standard deviation parameter is estimated from the data; if set to
+#'   a positive number, then residual standard deviation is fixed to that value.
 #'
 #' @return lifeplus_data_model
 #' @export
-data_model_normal <- function(prior_mean = 0, prior_sd = 1) {
+data_model_normal <- function(prior_mean = 0, prior_sd = 1, fixed_sd = NULL) {
+  checkmate::assert_number(fixed_sd, null.ok = TRUE, lower = 0)
   structure(
     list(
       name = "normal",
       prior_mean = prior_mean,
       prior_sd = prior_sd,
       stan_data = list(
+        fix_epsilon_sigma = !is.null(fixed_sd),
+        epsilon_sigma_fixed = ifelse(is.null(fixed_sd), 0, fixed_sd),
         epsilon_sigma_prior_mu = prior_mean,
         epsilon_sigma_prior_sd = prior_sd
       ),

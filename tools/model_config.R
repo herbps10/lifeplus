@@ -30,10 +30,6 @@ generate_config <- function(transition_model, data_model, shocks) {
     deps[[inc("approximate_gp.stan")]] <- "empty"
   }
 
-  if (shocks == TRUE) {
-    deps[[inc("shock.stan")]] <- "empty"
-  }
-
   if (data_model == "normal") {
     data_model_path <- inc("data_model_normal.stan")
   } else if (data_model == "outlier") {
@@ -44,6 +40,10 @@ generate_config <- function(transition_model, data_model, shocks) {
     data_model_path <- inc("data_model_heteroskedastic.stan")
   }
   deps[[data_model_path]] <- "empty"
+
+  if (shocks == TRUE) {
+    deps[[inc("shock.stan")]] <- "empty"
+  }
 
   if (transition_model == "double_logistic") {
     deps[[inc("Delta.stan")]] <- "empty"

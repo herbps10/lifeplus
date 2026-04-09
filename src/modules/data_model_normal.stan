@@ -4,13 +4,24 @@ functions {
   }
 }
 data {
+  int<lower=0, upper=1> fix_epsilon_sigma;
+  real<lower=0> epsilon_sigma_fixed;
   real<lower=0> epsilon_sigma_prior_mu;
   real<lower=0> epsilon_sigma_prior_sd;
 }
 transformed data {
 }
 parameters {
-  real<lower=0> epsilon_sigma;
+  array[1 - fix_epsilon_sigma] real<lower=0> epsilon_sigma_raw;
+}
+transformed parameters{
+  real epsilon_sigma;
+  if(fix_epsilon_sigma == 1) {
+    epsilon_sigma = epsilon_sigma_fixed;
+  }
+  else {
+    epsilon_sigma = epsilon_sigma_raw[1];
+  }
 }
 model {
   epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);

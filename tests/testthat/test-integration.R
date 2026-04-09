@@ -15,6 +15,7 @@ test_that("lifeplus successfully runs with all model combinations", {
 
   data_models <- list(
     normal = data_model_normal(),
+    normal = data_model_normal(fixed_sd = 1),
     outlier = data_model_outlier()
   )
 

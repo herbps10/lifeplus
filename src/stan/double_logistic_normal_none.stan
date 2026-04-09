@@ -41,6 +41,8 @@ data {
   int<lower=0, upper=1> hierarchical;
   int<lower=0, upper=1> shock_diff_mode;
   
+  int<lower=0, upper=1> fix_epsilon_sigma;
+  real<lower=0> epsilon_sigma_fixed;
   real<lower=0> epsilon_sigma_prior_mu;
   real<lower=0> epsilon_sigma_prior_sd;
   
@@ -71,7 +73,7 @@ transformed data {
   }
 }
 parameters {
-  real<lower=0> epsilon_sigma;
+  array[1 - fix_epsilon_sigma] real<lower=0> epsilon_sigma_raw;
   
   matrix[C, D] raw_Delta;
   array[hierarchical] vector[D] mu_Delta;
@@ -89,6 +91,13 @@ transformed parameters {
     first_transition[1] = rep_vector(0, C);
     intermediate_transition[1] = rep_vector(0, C);
     final_transition[1] = rep_vector(0, C);
+  }
+  
+  real epsilon_sigma;
+  if (fix_epsilon_sigma == 1) {
+    epsilon_sigma = epsilon_sigma_fixed;
+  } else {
+    epsilon_sigma = epsilon_sigma_raw[1];
   }
   
   matrix[C, D] Delta;
