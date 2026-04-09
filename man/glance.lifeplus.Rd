@@ -10,6 +10,8 @@
   conf.level = 0.95,
   diagnostics = TRUE,
   validations = TRUE,
+  areas = NULL,
+  times = NULL,
   ...
 )
 }
@@ -26,6 +28,11 @@ Defaults to \code{0.95} (i.e., a 95\% interval).}
 \item{diagnostics}{Logical; whether to include MCMC diagnostic summary measures (default: \code{TRUE})}
 
 \item{validations}{Logical; whether to include held-out data validation summary measures (default: \code{TRUE})}
+
+\item{areas}{Vector of areas to include in the validation summaries. If \code{NULL} (default) all areas are included.}
+
+\item{times}{Integer vector of times to include in the validation summaries. If \code{NULL} (default) all times
+are included.}
 
 \item{...}{Additional arguments (currently ignored)}
 }

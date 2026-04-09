@@ -14,6 +14,9 @@
 #'   Defaults to \code{0.95} (i.e., a 95% interval).
 #' @param diagnostics Logical; whether to include MCMC diagnostic summary measures (default: \code{TRUE})
 #' @param validations Logical; whether to include held-out data validation summary measures (default: \code{TRUE})
+#' @param areas Vector of areas to include in the validation summaries. If \code{NULL} (default) all areas are included.
+#' @param times Integer vector of times to include in the validation summaries. If \code{NULL} (default) all times
+#'   are included.
 #' @param ... Additional arguments (currently ignored)
 #'
 #' @return A \code{\link[tibble]{tibble}} with columns:
@@ -46,6 +49,8 @@ glance.lifeplus <- function(
   conf.level = 0.95,
   diagnostics = TRUE,
   validations = TRUE,
+  areas = NULL,
+  times = NULL,
   ...
 ) {
   component <- match.arg(component)
@@ -73,9 +78,17 @@ glance.lifeplus <- function(
     result$min_ebfmi <- min(x$diagnose$ebfmi)
   }
 
+  if (is.null(times)) {
+    times <- x$times
+  }
+
+  if (is.null(areas)) {
+    areas <- x$areas
+  }
+
   if (n_held_out > 0 && validations) {
     valid <- x$validation[[component]]
-    valid <- valid[valid$time == max(valid$time), ]
+    valid <- valid[valid$time %in% times & valid$area %in% areas, ]
 
     result$mean_error <- mean(valid$error)
     result$median_error <- stats::median(valid$error)
