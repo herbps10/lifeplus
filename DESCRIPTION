@@ -32,3 +32,4 @@ Suggests:
     wpp2024
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Remotes: PPgp/wpp2024
