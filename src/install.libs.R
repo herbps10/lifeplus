@@ -1,4 +1,3 @@
-R_PACKAGE_DIR <- "/Users/susmah01/lifeplus"
 libs <- file.path(R_PACKAGE_DIR, "libs", R_ARCH)
 dir.create(libs, recursive = TRUE, showWarnings = FALSE)
 for (file in c("symbols.rds", Sys.glob(paste0("*", SHLIB_EXT)))) {
