@@ -22,6 +22,7 @@ data_model_normal <- function(prior_mean = 0, prior_sd = 1, fixed_sd = NULL) {
       name = "normal",
       prior_mean = prior_mean,
       prior_sd = prior_sd,
+      fixed_sd = fixed_sd,
       stan_data = list(
         fix_epsilon_sigma = !is.null(fixed_sd),
         epsilon_sigma_fixed = ifelse(is.null(fixed_sd), 0, fixed_sd),
@@ -54,8 +55,12 @@ normal_extract_params <- function(fit, n_cores, posterior_quantiles) {
 normal_print_info <- function(x) {
   cli::cli_h3("Settings")
   cli::cli_ul()
-  cli::cli_li("Prior mean: {.val {x$prior_mean}}")
-  cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
+  if (is.null(x$fixed_sd)) {
+    cli::cli_li("Prior mean: {.val {x$prior_mean}}")
+    cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
+  } else {
+    cli::cli("Fixed standard deviation: {.val {x$fixed_sd}}")
+  }
   cli::cli_end()
 }
 
@@ -71,13 +76,16 @@ normal_print_info <- function(x) {
 #' @param outlier_threshold threshold for ignoring observed life expectancy differences.
 #' @param prior_mean Prior mean for white noise standard deviation
 #' @param prior_sd Prior standard deviation for white noise standard deviation
+#' @param fixed_sd if \code{NULL} (default), then residual standard deviation parameter is estimated from the data; if set to
+#'   a positive number, then residual standard deviation is fixed to that value.
 #'
 #' @return lifeplus_data_model
 #' @export
 data_model_outlier <- function(
   outlier_threshold = 5,
   prior_mean = 0,
-  prior_sd = 1
+  prior_sd = 1,
+  fixed_sd = NULL
 ) {
   structure(
     list(
@@ -85,7 +93,10 @@ data_model_outlier <- function(
       outlier_threshold = outlier_threshold,
       prior_mean = prior_mean,
       prior_sd = prior_sd,
+      fixed_sd = fixed_sd,
       stan_data = list(
+        fix_epsilon_sigma = !is.null(fixed_sd),
+        epsilon_sigma_fixed = ifelse(is.null(fixed_sd), 0, fixed_sd),
         outlier_threshold = outlier_threshold,
         epsilon_sigma_prior_mu = prior_mean,
         epsilon_sigma_prior_sd = prior_sd
@@ -117,8 +128,12 @@ outlier_print_info <- function(x) {
   cli::cli_h3("Settings")
   cli::cli_ul()
   cli::cli_li("Outlier threshold: {.val {x$outlier_threshold}}")
-  cli::cli_li("Prior mean: {.val {x$prior_mean}}")
-  cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
+  if (is.null(x$fixed_sd)) {
+    cli::cli_li("Prior mean: {.val {x$prior_mean}}")
+    cli::cli_li("Prior standard deviation: {.val {x$prior_sd}}")
+  } else {
+    cli::cli("Fixed standard deviation: {.val {x$fixed_sd}}")
+  }
   cli::cli_end()
 }
 

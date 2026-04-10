@@ -15,8 +15,9 @@ test_that("lifeplus successfully runs with all model combinations", {
 
   data_models <- list(
     normal = data_model_normal(),
-    normal = data_model_normal(fixed_sd = 1),
-    outlier = data_model_outlier()
+    normal_fixed = data_model_normal(fixed_sd = 1),
+    outlier = data_model_outlier(),
+    outlier_fixed = data_model_outlier(fixed_sd = 1)
   )
 
   shock_models <- list(

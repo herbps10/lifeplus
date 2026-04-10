@@ -4,7 +4,12 @@
 \alias{data_model_outlier}
 \title{Outlier Data Model}
 \usage{
-data_model_outlier(outlier_threshold = 5, prior_mean = 0, prior_sd = 1)
+data_model_outlier(
+  outlier_threshold = 5,
+  prior_mean = 0,
+  prior_sd = 1,
+  fixed_sd = NULL
+)
 }
 \arguments{
 \item{outlier_threshold}{threshold for ignoring observed life expectancy differences.}
@@ -12,6 +17,9 @@ data_model_outlier(outlier_threshold = 5, prior_mean = 0, prior_sd = 1)
 \item{prior_mean}{Prior mean for white noise standard deviation}
 
 \item{prior_sd}{Prior standard deviation for white noise standard deviation}
+
+\item{fixed_sd}{if \code{NULL} (default), then residual standard deviation parameter is estimated from the data; if set to
+a positive number, then residual standard deviation is fixed to that value.}
 }
 \value{
 lifeplus_data_model
