@@ -53,4 +53,16 @@ model {
 generated quantities {
   vector[1] epsilon_params;
   epsilon_params[1] = epsilon_sigma;
+
+  if(outlier_threshold < 1000) {
+    log_lik = rep_vector(0, size(log_lik));
+    for(n in 1:size(indices_below_threshold)) {
+      log_lik[indices_below_threshold[n]] = normal_lpdf(diff[indices_below_threshold[n]] | to_vector(transition_function)[indices_below_threshold[n]], epsilon_sigma);
+    }
+  }
+  else {
+    for(n in 1:size(log_lik)) {
+      log_lik[n] = normal_lpdf(diff[n] | to_vector(transition_function)[n], epsilon_sigma);
+    }
+  }
 }

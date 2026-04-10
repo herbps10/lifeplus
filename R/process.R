@@ -307,7 +307,9 @@ process_validation <- function(fit) {
 
   if (fit$shock_model$name != "none") {
     result$shockfree <- merge(
-      x = fit$posteriors$life[fit$posteriors$life$time %in% held_out_times, ],
+      x = fit$posteriors$shockfree[
+        fit$posteriors$shockfree$time %in% held_out_times,
+      ],
       y = held_out_observations,
       by.x = c("area", "time"),
       by.y = c(area, time)

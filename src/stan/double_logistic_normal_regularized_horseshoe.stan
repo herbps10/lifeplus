@@ -233,6 +233,8 @@ model {
   }
 }
 generated quantities {
+  vector[C * (T - 1)] log_lik;
+  
   matrix[C, Tpred] eta;
   
   matrix[generate_shock_free * C, generate_shock_free * Tpred] eta_shockfree;
@@ -259,6 +261,21 @@ generated quantities {
   
   vector[1] epsilon_params;
   epsilon_params[1] = epsilon_sigma;
+  
+  for (n in 1 : size(log_lik)) {
+    if (shock_diff_mode == 1) {
+      log_lik[n] = normal_lpdf(diff[n] |
+                               to_vector(
+                                         transition_function
+                                         + shock[ : , 2 : T]
+                                         - shock[ : , 1 : (T - 1)])[n],
+                               epsilon_sigma);
+    } else {
+      log_lik[n] = normal_lpdf(diff[n] |
+                               to_vector(transition_function + shock)[n],
+                               epsilon_sigma);
+    }
+  }
   
   real lambda_tilde_sd = sd(lambda_tilde);
   

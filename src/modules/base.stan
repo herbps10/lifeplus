@@ -58,6 +58,8 @@ model {
   }
 }
 generated quantities {
+  vector[C * (T - 1)] log_lik;
+
   matrix[C, Tpred] eta;
 
   matrix[generate_shock_free * C, generate_shock_free * Tpred] eta_shockfree;

@@ -53,6 +53,7 @@ generics::glance
 #'   \item{\code{grid}}{Grid of transition function inputs.}
 #'   \item{\code{elapsed}}{A \code{link{difftime}} object for wall-clock sampling time.}
 #'   \item{\code{posteriors}}{Posterior summaries.}
+#'   \item{\code{log_lik}}{Log likelihood values.}
 #'   \item{\code{diagnose}}{MCMC diagnostic sumary from CmdStan.}
 #'   \item{\code{validation}}{Validation results for held-out observations, including error and whether the posterior intervals cover the true value of the outcome.}
 #'   \item{\code{posterior_quantiles}}{The numeric vector of quantile probabilities used for posterior summaries.}
@@ -250,6 +251,8 @@ lifeplus <- function(
     ifelse(is.null(args$parallel_chains), 1, args$parallel_chains),
     posterior_quantiles = posterior_quantiles
   )
+
+  result$log_lik <- fit$draws("log_lik")
 
   result$diagnose <- fit$diagnostic_summary()
   result$posterior_quantiles <- posterior_quantiles
