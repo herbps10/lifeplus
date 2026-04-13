@@ -18,6 +18,7 @@ An object of class \code{lifeplus_transition_model}, a named list containing:
 \item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
 \item{\code{param_names}}{Character vector of parameter names for labelling posterior summaries.}
 \item{\code{stan_data}}{A named list of data passed to the Stan model.}
+\item{\code{D_phi}}{Dimension of shared parameters for expectation propagation.}
 \item{\code{extract_params}}{A function for extracting transition parameters from a fitted model
 (used internally)}
 \item{\code{print_info}}{A function for printing the transition model.}

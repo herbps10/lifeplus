@@ -22,6 +22,10 @@ transformed parameters{
   else {
     epsilon_sigma = epsilon_sigma_raw[1];
   }
+
+  if(tilted == 1) {
+    ep_phi[1][, 1] = rep_vector(epsilon_sigma, C);
+  }
 }
 model {
   epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);

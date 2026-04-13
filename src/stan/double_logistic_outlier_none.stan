@@ -40,6 +40,12 @@ data {
   int<lower=0, upper=1> include_prior;
   int<lower=0, upper=1> hierarchical;
   int<lower=0, upper=1> shock_diff_mode;
+  int<lower=0, upper=1> tilted;
+  
+  int<lower=0> D_ep_phi;
+  
+  array[tilted] vector[D_ep_phi] ep_phi_prior_mu;
+  array[tilted] matrix[D_ep_phi, D_ep_phi] ep_phi_prior_Sigma;
   
   real<lower=0> outlier_threshold;
   
@@ -99,6 +105,7 @@ parameters {
   array[hierarchical] cholesky_factor_corr[D] L_Omega_Delta;
 }
 transformed parameters {
+  array[tilted] matrix[C, D_ep_phi] ep_phi;
   matrix[C, T_shocks] shock = rep_matrix(0, C, T_shocks);
   matrix[C, T - 1] transition_function = rep_matrix(0, C, T - 1);
   array[include_prior] vector[C] first_transition;
@@ -163,12 +170,23 @@ transformed parameters {
                             Delta[ : , 1], Delta[ : , 2], Delta[ : , 3],
                             Delta[ : , 4], Delta[ : , 5], Delta[ : , 6]);
   }
+  
+  if (tilted == 1) {
+    ep_phi[1][ : , 2 : D_ep_phi] = Delta;
+  }
 }
 model {
   if (include_prior == 1) {
     to_vector(first_transition[1]) ~ normal(0, 25);
     to_vector(intermediate_transition[1]) ~ normal(0, 4);
     to_vector(final_transition[1]) ~ normal(1.15 / 10, 0.5);
+  }
+  
+  if (tilted == 1) {
+    for (c in 1 : C) {
+      ep_phi[1][c,  : ] ~ multi_normal(ep_phi_prior_mu[1],
+                                       ep_phi_prior_Sigma[1]);
+    }
   }
   
   epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);

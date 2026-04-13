@@ -41,6 +41,9 @@ generics::glance
 #' @param posterior_quantiles A numeric vector of probabilities in \code{(0, 1)}
 #'   at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_posterior_quantiles}()}, which provides
 #'   a fine grid from the 0.1% to 99.9% quantile.
+#' @param cavity_prior For use in expectation propagation model fitting. If \code{NULL} (default), the model is fit with
+#'   the default prior specification. If set to output of \code{\link{lifeplus_cavity_prior}()},
+#'   then a tilted model is fit with a multivariate normal prior set to hierarchical parameters.
 #' @param ... additional arguments passed to \code{CmdStanModel::sample}.
 #'
 #' @return An object of class \code{lifeplus}, which is a named list containing:
@@ -99,6 +102,7 @@ lifeplus <- function(
   shock_model = shock_model_none(),
   cutoff_time = NULL,
   posterior_quantiles = lifeplus_default_posterior_quantiles(),
+  cavity_prior = NULL,
   ...
 ) {
   ###### Initial argument checks
@@ -112,6 +116,7 @@ lifeplus <- function(
   checkmate::assert_number(start_time, null.ok = TRUE)
   checkmate::assert_number(end_time, null.ok = TRUE)
   checkmate::assert_number(cutoff_time, null.ok = TRUE)
+  checkmate::assert_class(cavity_prior, "lifeplus_cavity_prior", null.ok = TRUE)
 
   checkmate::assert_numeric(
     posterior_quantiles,
@@ -174,6 +179,26 @@ lifeplus <- function(
     obs[c, ] <- data[[y]][data$c == c & data[[time]] <= cutoff_time][o]
   }
 
+  tilted <- 0
+  D_phi <- 0
+  phi_prior_mu <- phi_prior_Sigma <- numeric(0)
+  if (!is.null(cavity_prior)) {
+    tilted <- 1
+    D_phi <- ifelse(
+      is.null(transition_model$D_phi),
+      0,
+      transition_model$D_phi
+    ) +
+      ifelse(is.null(shock_model$D_phi), 0, shock_model$D_phi) +
+      ifelse(is.null(data_model$D_phi), 0, data_model$D_phi)
+
+    phi_prior_mu <- matrix(cavity_prior$mu, nrow = 1)
+    phi_prior_Sigma <- array(
+      cavity_prior$Sigma,
+      dim = c(1, nrow(cavity_prior$Sigma), ncol(cavity_prior$Sigma))
+    )
+  }
+
   stan_data <- list(
     C = nrow(obs),
     T = ncol(obs),
@@ -185,7 +210,12 @@ lifeplus <- function(
     grid = grid,
 
     shock_diff_mode = 0,
-    include_prior = 0
+    include_prior = 0,
+
+    tilted = tilted,
+    D_ep_phi = D_phi,
+    ep_phi_prior_mu = phi_prior_mu,
+    ep_phi_prior_Sigma = phi_prior_Sigma
   )
 
   # Augment stan_data with additional elements from data model
@@ -238,6 +268,7 @@ lifeplus <- function(
     time = time,
     area = area,
     cutoff_time = cutoff_time,
+    cavity_prior = cavity_prior,
 
     transition_model = transition_model,
     data_model = data_model,

@@ -23,6 +23,7 @@ data_model_normal <- function(prior_mean = 0, prior_sd = 1, fixed_sd = NULL) {
       prior_mean = prior_mean,
       prior_sd = prior_sd,
       fixed_sd = fixed_sd,
+      D_phi = 1,
       stan_data = list(
         fix_epsilon_sigma = !is.null(fixed_sd),
         epsilon_sigma_fixed = ifelse(is.null(fixed_sd), 0, fixed_sd),

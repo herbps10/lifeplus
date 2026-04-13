@@ -32,6 +32,7 @@
 #'   \item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
 #'   \item{\code{param_names}}{Character vector of parameter names for labelling posterior summaries.}
 #'   \item{\code{stan_data}}{A named list of data passed to the Stan model.}
+#'   \item{\code{D_phi}}{Dimension of shared parameters for expectation propagation.}
 #'   \item{\code{extract_params}}{A function for extracting transition parameters from a fitted model
 #'     (used internally)}
 #'   \item{\code{print_info}}{A function for printing the transition model.}
@@ -48,7 +49,9 @@
 #' \code{\link{lifeplus}()} for model fitting.
 #'
 #' @export
-transition_model_double_logistic <- function(hierarchical = TRUE) {
+transition_model_double_logistic <- function(
+  hierarchical = TRUE
+) {
   checkmate::assert_flag(hierarchical)
 
   n_params <- 6L
@@ -60,6 +63,7 @@ transition_model_double_logistic <- function(hierarchical = TRUE) {
       name = "double_logistic",
       hierarchical = hierarchical,
       param_names = param_names,
+      D_phi = length(param_names),
       stan_data = list(
         D = n_params,
         hierarchical = as.integer(hierarchical),

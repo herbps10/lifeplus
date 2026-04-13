@@ -16,6 +16,7 @@ lifeplus(
   shock_model = shock_model_none(),
   cutoff_time = NULL,
   posterior_quantiles = lifeplus_default_posterior_quantiles(),
+  cavity_prior = NULL,
   ...
 )
 }
@@ -49,6 +50,10 @@ to use \code{max(data[[time]])}.}
 \item{posterior_quantiles}{A numeric vector of probabilities in \code{(0, 1)}
 at which to summarise posterior draws. Defaults to \code{\link{lifeplus_default_posterior_quantiles}()}, which provides
 a fine grid from the 0.1\% to 99.9\% quantile.}
+
+\item{cavity_prior}{For use in expectation propagation model fitting. If \code{NULL} (default), the model is fit with
+the default prior specification. If set to output of \code{\link{lifeplus_cavity_prior}()},
+then a tilted model is fit with a multivariate normal prior set to hierarchical parameters.}
 
 \item{...}{additional arguments passed to \code{CmdStanModel::sample}.}
 }

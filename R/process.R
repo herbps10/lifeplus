@@ -269,6 +269,10 @@ lifeplus_posteriors <- function(
     )
   }
 
+  if (!is.null(fit$cavity_prior)) {
+    value$phi <- fit$samples$draws("ep_phi")
+  }
+
   value
 }
 
