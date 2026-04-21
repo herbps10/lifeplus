@@ -33,10 +33,6 @@ transformed parameters {
     }
     final_transition[1] = rate_double_logistic(rep_vector(grid[num_grid], C), Delta[, 1], Delta[, 2], Delta[, 3], Delta[, 4], Delta[, 5], Delta[, 6]);
   }
-
-  if(tilted == 1) {
-    ep_phi[1][, 2:D_ep_phi] = Delta;
-  }
 }
 generated quantities {
   // With shocks

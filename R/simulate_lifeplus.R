@@ -6,7 +6,7 @@
 #' @return data frame
 #' @importFrom stats runif rnorm
 #' @export
-simulate_lifeplus <- function(num_areas, num_times, seed = NULL) {
+lifeplus_simulate <- function(num_areas, num_times, seed = NULL) {
   checkmate::check_integer(num_areas, lower = 1)
   checkmate::check_integer(num_times, lower = 1)
   checkmate::check_integer(seed, null.ok = TRUE)

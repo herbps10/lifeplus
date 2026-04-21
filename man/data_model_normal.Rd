@@ -4,7 +4,12 @@
 \alias{data_model_normal}
 \title{Normal Data Model}
 \usage{
-data_model_normal(prior_mean = 0, prior_sd = 1, fixed_sd = NULL)
+data_model_normal(
+  prior_mean = 0,
+  prior_sd = 1,
+  fixed_sd = NULL,
+  log_scale = FALSE
+)
 }
 \arguments{
 \item{prior_mean}{Prior mean for white noise standard deviation}
@@ -13,6 +18,9 @@ data_model_normal(prior_mean = 0, prior_sd = 1, fixed_sd = NULL)
 
 \item{fixed_sd}{if \code{NULL} (default), then residual standard deviation parameter is estimated from the data; if set to
 a positive number, then residual standard deviation is fixed to that value.}
+
+\item{log_scale}{if \code{FALSE} (default), the residual is modeled on the original scale; if \code{TRUE}, then it is modeled
+on a log scale}
 }
 \value{
 lifeplus_data_model

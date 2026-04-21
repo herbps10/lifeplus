@@ -121,7 +121,7 @@ parameters {
   real<lower=0> gp_sigma;
 }
 transformed parameters {
-  array[tilted] matrix[C, D_ep_phi] ep_phi;
+  array[tilted] vector[D_ep_phi] ep_phi;
   matrix[C, T_shocks] shock = rep_matrix(0, C, T_shocks);
   matrix[C, T - 1] transition_function = rep_matrix(0, C, T - 1);
   array[include_prior] vector[C] first_transition;
@@ -205,10 +205,7 @@ model {
   }
   
   if (tilted == 1) {
-    for (c in 1 : C) {
-      ep_phi[1][c,  : ] ~ multi_normal(ep_phi_prior_mu[1],
-                                       ep_phi_prior_Sigma[1]);
-    }
+    ep_phi[1] ~ multi_normal(ep_phi_prior_mu[1], ep_phi_prior_Sigma[1]);
   }
   
   epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);

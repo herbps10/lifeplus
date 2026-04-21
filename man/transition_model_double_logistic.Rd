@@ -4,21 +4,40 @@
 \alias{transition_model_double_logistic}
 \title{Double Logistic Transition Model}
 \usage{
-transition_model_double_logistic(hierarchical = TRUE)
+transition_model_double_logistic(
+  hierarchical = TRUE,
+  multivariate_prior = TRUE,
+  log_scale = FALSE,
+  prior_mean = 0,
+  prior_sd = 1
+)
 }
 \arguments{
 \item{hierarchical}{Logical; whether to estimate the double logistic parameters
 hierarchically across areas (default: \code{TRUE}). Setting this to \code{TRUE}
 enables partial pooling, which can improve estimation for areas with sparse data.}
+
+\item{multivariate_prior}{Logical; whether to apply a multivariate normal prior with
+hierarchical estimation.}
+
+\item{log_scale}{Logical; whether parameters are estimated on log scale (default: \code{FALSE}).}
+
+\item{prior_mean}{Prior mean for Delta1--Delta4, k, and z parameters (default: 0).}
+
+\item{prior_sd}{Prior standard deviation for Delta1--Delta4, k, and z parameters (default: 0).}
 }
 \value{
 An object of class \code{lifeplus_transition_model}, a named list containing:
 \describe{
 \item{\code{name}}{Character string \code{"double_logistic"}.}
 \item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
+\item{\code{multivariate_prior}}{Logical; whether multivariate normal prior is enabled.}
+\item{\code{log_scale}}{Logical; whether to model hierarchical standard deviations on log-scale.}
+\item{\code{prior_mean}}{Prior mean.}
+\item{\code{prior_sd}}{Prior standard deviation.}
 \item{\code{param_names}}{Character vector of parameter names for labelling posterior summaries.}
-\item{\code{stan_data}}{A named list of data passed to the Stan model.}
 \item{\code{D_phi}}{Dimension of shared parameters for expectation propagation.}
+\item{\code{stan_data}}{A named list of data passed to the Stan model.}
 \item{\code{extract_params}}{A function for extracting transition parameters from a fitted model
 (used internally)}
 \item{\code{print_info}}{A function for printing the transition model.}

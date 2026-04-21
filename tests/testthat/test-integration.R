@@ -2,7 +2,7 @@ test_that("lifeplus successfully runs with all model combinations", {
   skip_on_cran()
   skip_if_not_installed("cmdstanr")
 
-  data <- simulate_lifeplus(num_areas = 2, num_times = 15, seed = 10016)
+  data <- lifeplus_simulate(num_areas = 2, num_times = 15, seed = 10016)
 
   transition_models <- list(
     dl_hier = transition_model_double_logistic(hierarchical = TRUE),

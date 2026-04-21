@@ -48,6 +48,7 @@ data {
   array[tilted] matrix[D_ep_phi, D_ep_phi] ep_phi_prior_Sigma;
   
   int<lower=0, upper=1> fix_epsilon_sigma;
+  int<lower=0, upper=1> epsilon_sigma_log_scale;
   real<lower=0> epsilon_sigma_fixed;
   real<lower=0> epsilon_sigma_prior_mu;
   real<lower=0> epsilon_sigma_prior_sd;
@@ -55,10 +56,15 @@ data {
   int<lower=1> D;
   
   array[D] int<lower=0, upper=1> Delta_constrain;
+  int<lower=0, upper=1> Delta_multi;
+  int<lower=0, upper=1> Delta_log_scale;
   vector[D] Delta_lower;
   vector[D] Delta_upper;
   vector[D] Delta_prior_mean;
   vector[D] Delta_prior_sd;
+  
+  vector[D] Delta_sigma_prior_mean;
+  vector[D] Delta_sigma_prior_sd;
 }
 transformed data {
   vector[C * (T - 1)] diff = to_vector(y[ : , 2 : T] - y[ : , 1 : (T - 1)]);
@@ -79,15 +85,15 @@ transformed data {
   }
 }
 parameters {
-  array[1 - fix_epsilon_sigma] real<lower=0> epsilon_sigma_raw;
+  array[1 - fix_epsilon_sigma] real epsilon_sigma_raw;
   
   matrix[C, D] raw_Delta;
   array[hierarchical] vector[D] mu_Delta;
-  array[hierarchical] vector<lower=0>[D] sigma_Delta;
-  array[hierarchical] cholesky_factor_corr[D] L_Omega_Delta;
+  array[hierarchical] vector[D] sigma_Delta_raw;
+  array[hierarchical * Delta_multi] cholesky_factor_corr[D] L_Omega_Delta;
 }
 transformed parameters {
-  array[tilted] matrix[C, D_ep_phi] ep_phi;
+  array[tilted] vector[D_ep_phi] ep_phi;
   matrix[C, T_shocks] shock = rep_matrix(0, C, T_shocks);
   matrix[C, T - 1] transition_function = rep_matrix(0, C, T - 1);
   array[include_prior] vector[C] first_transition;
@@ -103,22 +109,40 @@ transformed parameters {
   real epsilon_sigma;
   if (fix_epsilon_sigma == 1) {
     epsilon_sigma = epsilon_sigma_fixed;
+  } else if (epsilon_sigma_log_scale) {
+    epsilon_sigma = exp(epsilon_sigma_raw[1]);
   } else {
     epsilon_sigma = epsilon_sigma_raw[1];
   }
   
-  if (tilted == 1) {
-    ep_phi[1][ : , 1] = rep_vector(epsilon_sigma, C);
+  if (tilted == 1 && fix_epsilon_sigma == 0) {
+    ep_phi[1][D_ep_phi] = epsilon_sigma_raw[1];
   }
   
   matrix[C, D] Delta;
-  
+  array[hierarchical] vector[D] sigma_Delta;
   if (hierarchical == 1) {
+    if (Delta_log_scale == 1) {
+      sigma_Delta[1] = exp(sigma_Delta_raw[1]);
+    } else {
+      sigma_Delta[1] = sigma_Delta_raw[1];
+    }
+  }
+  
+  if (hierarchical && Delta_multi) {
     Delta = rep_matrix(mu_Delta[1]', C)
             + (diag_pre_multiply(sigma_Delta[1], L_Omega_Delta[1])
                * raw_Delta')';
+  } else if (hierarchical && !Delta_multi) {
+    Delta = rep_matrix(mu_Delta[1]', C)
+            + (diag_matrix(sigma_Delta[1]) * raw_Delta')';
   } else {
     Delta = raw_Delta;
+  }
+  
+  if (tilted == 1 && hierarchical == 1) {
+    ep_phi[1][1 : D] = mu_Delta[1];
+    ep_phi[1][(D + 1) : (2 * D)] = sigma_Delta_raw[1];
   }
   
   for (n in 1 : D) {
@@ -156,10 +180,6 @@ transformed parameters {
                             Delta[ : , 1], Delta[ : , 2], Delta[ : , 3],
                             Delta[ : , 4], Delta[ : , 5], Delta[ : , 6]);
   }
-  
-  if (tilted == 1) {
-    ep_phi[1][ : , 2 : D_ep_phi] = Delta;
-  }
 }
 model {
   if (include_prior == 1) {
@@ -169,13 +189,14 @@ model {
   }
   
   if (tilted == 1) {
-    for (c in 1 : C) {
-      ep_phi[1][c,  : ] ~ multi_normal(ep_phi_prior_mu[1],
-                                       ep_phi_prior_Sigma[1]);
-    }
+    ep_phi[1] ~ multi_normal(ep_phi_prior_mu[1], ep_phi_prior_Sigma[1]);
   }
   
-  epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
+  if (fix_epsilon_sigma == 0) {
+    epsilon_sigma_raw ~ normal(epsilon_sigma_prior_mu,
+                               epsilon_sigma_prior_sd);
+  }
+  
   if (shock_diff_mode == 1) {
     diff ~ normal(
                   to_vector(
@@ -186,11 +207,15 @@ model {
     diff ~ normal(to_vector(transition_function + shock), epsilon_sigma);
   }
   
-  if (hierarchical) {
+  if (hierarchical == 1) {
     to_vector(raw_Delta) ~ std_normal();
+    
     mu_Delta[1] ~ normal(Delta_prior_mean, Delta_prior_sd);
-    sigma_Delta[1] ~ std_normal();
-    L_Omega_Delta[1] ~ lkj_corr_cholesky(1.0);
+    sigma_Delta_raw[1] ~ normal(Delta_sigma_prior_mean, Delta_sigma_prior_sd);
+    
+    if (Delta_multi) {
+      L_Omega_Delta[1] ~ lkj_corr_cholesky(1.0);
+    }
   } else {
     for (d in 1 : D) {
       to_vector(raw_Delta[ : , d]) ~ normal(Delta_prior_mean[d],
@@ -243,8 +268,8 @@ generated quantities {
     }
   }
   
-  corr_matrix[D * hierarchical] Omega_Delta;
-  if (hierarchical) 
+  corr_matrix[D * hierarchical * Delta_multi] Omega_Delta;
+  if (hierarchical && Delta_multi == 1) 
     Omega_Delta = multiply_lower_tri_self_transpose(L_Omega_Delta[1]);
   
   for (t in (T + 1) : Tpred) {

@@ -53,6 +53,7 @@ data {
   int<lower=1> M;
   
   int<lower=0, upper=1> fix_epsilon_sigma;
+  int<lower=0, upper=1> epsilon_sigma_log_scale;
   real<lower=0> epsilon_sigma_fixed;
   real<lower=0> epsilon_sigma_prior_mu;
   real<lower=0> epsilon_sigma_prior_sd;
@@ -93,7 +94,7 @@ transformed data {
   }
 }
 parameters {
-  array[1 - fix_epsilon_sigma] real<lower=0> epsilon_sigma_raw;
+  array[1 - fix_epsilon_sigma] real epsilon_sigma_raw;
   
   matrix[C, M] raw_beta;
   array[hierarchical] vector[M] mu_beta;
@@ -103,7 +104,7 @@ parameters {
   real<lower=0> gp_sigma;
 }
 transformed parameters {
-  array[tilted] matrix[C, D_ep_phi] ep_phi;
+  array[tilted] vector[D_ep_phi] ep_phi;
   matrix[C, T_shocks] shock = rep_matrix(0, C, T_shocks);
   matrix[C, T - 1] transition_function = rep_matrix(0, C, T - 1);
   array[include_prior] vector[C] first_transition;
@@ -119,12 +120,14 @@ transformed parameters {
   real epsilon_sigma;
   if (fix_epsilon_sigma == 1) {
     epsilon_sigma = epsilon_sigma_fixed;
+  } else if (epsilon_sigma_log_scale) {
+    epsilon_sigma = exp(epsilon_sigma_raw[1]);
   } else {
     epsilon_sigma = epsilon_sigma_raw[1];
   }
   
-  if (tilted == 1) {
-    ep_phi[1][ : , 1] = rep_vector(epsilon_sigma, C);
+  if (tilted == 1 && fix_epsilon_sigma == 0) {
+    ep_phi[1][D_ep_phi] = epsilon_sigma_raw[1];
   }
   
   matrix[C, M] beta;
@@ -191,13 +194,14 @@ model {
   }
   
   if (tilted == 1) {
-    for (c in 1 : C) {
-      ep_phi[1][c,  : ] ~ multi_normal(ep_phi_prior_mu[1],
-                                       ep_phi_prior_Sigma[1]);
-    }
+    ep_phi[1] ~ multi_normal(ep_phi_prior_mu[1], ep_phi_prior_Sigma[1]);
   }
   
-  epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
+  if (fix_epsilon_sigma == 0) {
+    epsilon_sigma_raw ~ normal(epsilon_sigma_prior_mu,
+                               epsilon_sigma_prior_sd);
+  }
+  
   if (shock_diff_mode == 1) {
     diff ~ normal(
                   to_vector(

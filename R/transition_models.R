@@ -25,14 +25,23 @@
 #' @param hierarchical Logical; whether to estimate the double logistic parameters
 #'   hierarchically across areas (default: \code{TRUE}). Setting this to \code{TRUE}
 #'   enables partial pooling, which can improve estimation for areas with sparse data.
+#' @param multivariate_prior Logical; whether to apply a multivariate normal prior with
+#'   hierarchical estimation.
+#' @param log_scale Logical; whether parameters are estimated on log scale (default: \code{FALSE}).
+#' @param prior_mean Prior mean for Delta1--Delta4, k, and z parameters (default: 0).
+#' @param prior_sd Prior standard deviation for Delta1--Delta4, k, and z parameters (default: 0).
 #'
 #' @return An object of class \code{lifeplus_transition_model}, a named list containing:
 #' \describe{
 #'   \item{\code{name}}{Character string \code{"double_logistic"}.}
 #'   \item{\code{hierarchical}}{Logical; whether hierarchical estimation is enabled.}
+#'   \item{\code{multivariate_prior}}{Logical; whether multivariate normal prior is enabled.}
+#'   \item{\code{log_scale}}{Logical; whether to model hierarchical standard deviations on log-scale.}
+#'   \item{\code{prior_mean}}{Prior mean.}
+#'   \item{\code{prior_sd}}{Prior standard deviation.}
 #'   \item{\code{param_names}}{Character vector of parameter names for labelling posterior summaries.}
-#'   \item{\code{stan_data}}{A named list of data passed to the Stan model.}
 #'   \item{\code{D_phi}}{Dimension of shared parameters for expectation propagation.}
+#'   \item{\code{stan_data}}{A named list of data passed to the Stan model.}
 #'   \item{\code{extract_params}}{A function for extracting transition parameters from a fitted model
 #'     (used internally)}
 #'   \item{\code{print_info}}{A function for printing the transition model.}
@@ -50,7 +59,11 @@
 #'
 #' @export
 transition_model_double_logistic <- function(
-  hierarchical = TRUE
+  hierarchical = TRUE,
+  multivariate_prior = TRUE,
+  log_scale = FALSE,
+  prior_mean = 0,
+  prior_sd = 1
 ) {
   checkmate::assert_flag(hierarchical)
 
@@ -58,21 +71,37 @@ transition_model_double_logistic <- function(
 
   param_names <- c("Delta1", "Delta2", "Delta3", "Delta4", "k", "z")
 
+  if (log_scale == FALSE) {
+    Delta_sigma_prior_mean <- rep(0, n_params)
+    Delta_sigma_prior_sd <- rep(1, n_params)
+  } else {
+    Delta_sigma_prior_mean <- rep(-2, n_params)
+    Delta_sigma_prior_sd <- rep(1, n_params)
+  }
+
   structure(
     list(
       name = "double_logistic",
       hierarchical = hierarchical,
       param_names = param_names,
-      D_phi = length(param_names),
+      multivariate_prior = multivariate_prior,
+      log_scale = log_scale,
+      D_phi = ifelse(hierarchical == 1, n_params * 2, 0),
+      prior_mean = Delta_prior_mean,
+      prior_sd = Delta_prior_sd,
       stan_data = list(
         D = n_params,
         hierarchical = as.integer(hierarchical),
-        Delta_constrain = c(1, 1, 1, 1, 1, 1),
+        Delta_constrain = rep(1, n_params),
         Delta_lower = c(0, 0, 0, 5, 0, 0),
         Delta_upper = c(50, 50, 50, 50, 10, 1.15 / 5),
-        Delta_prior_mean = c(0, 0, 0, 0, 0, 0),
-        Delta_prior_sd = c(1, 1, 1, 1, 1, 1),
-        Delta_sigma_lower = c(0, 0, 0, 0, 0, 0)
+        Delta_prior_mean = rep(prior_mean, n_params),
+        Delta_prior_sd = rep(prior_sd, n_params),
+        Delta_sigma_prior_mean = Delta_sigma_prior_mean,
+        Delta_sigma_prior_sd = Delta_sigma_prior_sd,
+        Delta_sigma_lower = rep(0, n_params),
+        Delta_multi = as.numeric(multivariate_prior),
+        Delta_log_scale = as.integer(log_scale)
       ),
       extract_params = double_logistic_extract_params,
       print_info = double_logistic_print_info
@@ -95,7 +124,10 @@ double_logistic_extract_params <- function(fit, n_cores, posterior_quantiles) {
   post$area <- fit$areas[parsed$indices[, 1]]
 
   correlation <- NULL
-  if (is_hierarchical_transition(fit)) {
+  if (
+    is_hierarchical_transition(fit) &&
+      isTRUE(as.logical(fit$transition_model$multivariate_prior == TRUE))
+  ) {
     correlation <- summarise_draws(
       fit,
       "Omega_Delta",

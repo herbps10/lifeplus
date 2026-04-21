@@ -5,6 +5,7 @@ functions {
 }
 data {
   int<lower=0, upper=1> fix_epsilon_sigma;
+  int<lower=0, upper=1> epsilon_sigma_log_scale;
   real<lower=0> epsilon_sigma_fixed;
   real<lower=0> epsilon_sigma_prior_mu;
   real<lower=0> epsilon_sigma_prior_sd;
@@ -12,23 +13,29 @@ data {
 transformed data {
 }
 parameters {
-  array[1 - fix_epsilon_sigma] real<lower=0> epsilon_sigma_raw;
+  array[1 - fix_epsilon_sigma] real epsilon_sigma_raw;
 }
 transformed parameters{
   real epsilon_sigma;
   if(fix_epsilon_sigma == 1) {
     epsilon_sigma = epsilon_sigma_fixed;
   }
+  else if(epsilon_sigma_log_scale) {
+    epsilon_sigma = exp(epsilon_sigma_raw[1]);
+  }
   else {
     epsilon_sigma = epsilon_sigma_raw[1];
   }
 
-  if(tilted == 1) {
-    ep_phi[1][, 1] = rep_vector(epsilon_sigma, C);
+  if(tilted == 1 && fix_epsilon_sigma == 0) {
+    ep_phi[1][D_ep_phi] = epsilon_sigma_raw[1];
   }
 }
 model {
-  epsilon_sigma ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
+  if(fix_epsilon_sigma == 0) {
+    epsilon_sigma_raw ~ normal(epsilon_sigma_prior_mu, epsilon_sigma_prior_sd);
+  }
+
   if(shock_diff_mode == 1) {
     diff ~ normal(to_vector(transition_function + shock[, 2:T] - shock[, 1:(T - 1)]), epsilon_sigma);
   }

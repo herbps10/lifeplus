@@ -65,7 +65,7 @@ generics::glance
 #'
 #' @examples
 #' \dontrun{
-#' example_life_data <- simulate_lifeplus(num_areas = 1, num_times = 40)
+#' example_life_data <- lifeplus_simulate(num_areas = 1, num_times = 40)
 #'
 #' fit <- lifeplus(
 #'   data = example_life_data,
