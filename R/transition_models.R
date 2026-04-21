@@ -87,8 +87,8 @@ transition_model_double_logistic <- function(
       multivariate_prior = multivariate_prior,
       log_scale = log_scale,
       D_phi = ifelse(hierarchical == 1, n_params * 2, 0),
-      prior_mean = Delta_prior_mean,
-      prior_sd = Delta_prior_sd,
+      prior_mean = prior_mean,
+      prior_sd = prior_sd,
       stan_data = list(
         D = n_params,
         hierarchical = as.integer(hierarchical),

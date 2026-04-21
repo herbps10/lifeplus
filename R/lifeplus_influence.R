@@ -8,6 +8,7 @@
 #'
 #' @return vector of influence measures
 #' @importFrom posterior as_draws_matrix
+#' @importFrom stats cov
 #' @export
 lifeplus_influence <- function(x, parameters) {
   checkmate::assert_class(x, "lifeplus")
@@ -15,7 +16,7 @@ lifeplus_influence <- function(x, parameters) {
   log_lik_mat <- posterior::as_draws_matrix(x$log_lik)
   param_draws <- posterior::as_draws_matrix(x$samples$draws(parameters))
 
-  influence <- cov(log_lik_mat, param_draws)
+  influence <- stats::cov(log_lik_mat, param_draws)
 
   rownames(influence) <- paste0("obs_", 1:ncol(log_lik_mat))
 
